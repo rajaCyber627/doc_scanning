@@ -25,6 +25,16 @@ module.exports = {
   models: {
     main: env.CLAUDE_MODEL_MAIN || 'claude-opus-4-8',
     fast: env.CLAUDE_MODEL_FAST || 'claude-haiku-4-5-20251001',
+    // Document classification (P10): structured JSON output, low effort is enough
+    classify: env.CLAUDE_MODEL_CLASSIFY || 'claude-opus-5-5',
+  },
+
+  classification: {
+    // Default for the admin AI switch when it has never been set (the switch itself is
+    // stored in the database and can be changed from the admin screen at any time)
+    aiEnabledByDefault: env.CLASSIFICATION_AI_DEFAULT !== 'false',
+    effort: env.CLASSIFICATION_EFFORT || 'low',
+    maxTextChars: int(env.CLASSIFICATION_MAX_TEXT_CHARS, 30000), // text sent to the model, whole pages first
   },
 
   pipeline: {

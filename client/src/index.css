@@ -903,3 +903,41 @@ input[type="checkbox"]:focus-visible {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* --- classification (P10) --- */
+.sugg-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 32%) 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.quote-chip {
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  background: var(--overlay);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.quote-chip:hover {
+  color: inherit;
+  border-color: var(--accent);
+}
+.acc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.acc-table th,
+.acc-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-muted);
+}

@@ -21,6 +21,7 @@ Object.assign(process.env, {
   UPLOAD_PART_MB: '1',
   UPLOAD_MAX_MB: '100',
   UPLOAD_TRANSPORT: 'auto',
+  CLASSIFICATION_AI_DEFAULT: 'false', // AI suggestions off unless a test turns them on
   TEXT_MAX_STORED_CHARS: '50000', // small so the "very long text" path is testable
   FORMATS_MAX_ARCHIVE_ENTRIES: '50', // small so the zip limits are testable
   SOFFICE_PATH: '/nonexistent/soffice', // tests always use the built-in text PDF view

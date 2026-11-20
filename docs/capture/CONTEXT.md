@@ -278,7 +278,13 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   metadataErrors; confidentialityLevel → File.confidentiality. Handoff gated on metadataStatus
   complete. `core/access` viewer.isAdmin. Client MetadataPanel (+PersonPicker, shortcuts),
   BulkEditModal, TaxonomyPage (admin nav). See `docs/capture/metadata.md`.
-- [ ] P10 Automated / assisted classification
+- [x] P10 Automated / assisted classification — `features/classification` (classifier: claude-opus-5-5
+  structured JSON output, taxonomy in a cached system prompt, page-marked text, one retry; service:
+  runClassification in the `classify` stage, person match by ID > name, restricted-first routing,
+  review queues general/restricted, accept/reassign, admin settings in `models/Setting` (AI on/off,
+  auto-accept off by default + threshold), ClassificationOutcome accuracy). Review endpoint refuses
+  while classification reasons are open. Client ClassificationPanel (quote chips find text on the
+  page), ReviewQueuePage `/review`, AiSettingsCard on TaxonomyPage. See `docs/capture/classification.md`.
 - [ ] P11 Document splitting
 - [ ] P12 Document merging
 - [ ] P13 Scanning

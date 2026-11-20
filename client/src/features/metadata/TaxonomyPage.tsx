@@ -3,6 +3,7 @@ import { message } from "antd";
 import AppShell from "../../components/AppShell";
 import { getUser } from "../../auth";
 import { errorMessage } from "../upload/uploadApi";
+import AiSettingsCard from "../classification/AiSettingsCard";
 import { exportTaxonomy, getTaxonomy, importTaxonomy, saveDocumentType, DocType, FieldDef, Taxonomy } from "./metadataApi";
 
 const TYPES: FieldDef["type"][] = ["text", "number", "date", "select"];
@@ -79,6 +80,7 @@ export default function TaxonomyPage() {
           Import JSON
         </button>
       </div>
+      <AiSettingsCard userId={user._id} />
       {problems.length > 0 && (
         <div className="card drop-rejected" role="alert">
           <strong>Please fix:</strong>

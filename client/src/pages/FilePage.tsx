@@ -12,6 +12,7 @@ import RelatedDocuments from "../features/documents/RelatedDocuments";
 import OcrPanel from "../features/ocr/OcrPanel";
 import DuplicatePanel from "../features/duplicates/DuplicatePanel";
 import MetadataPanel from "../features/metadata/MetadataPanel";
+import ClassificationPanel from "../features/classification/ClassificationPanel";
 import { getUser } from "../auth";
 import {
   getFile,
@@ -256,6 +257,17 @@ export default function FilePage() {
     setCur(0);
     setSearching(!!v && (isPdf || isImage || hasRendition));
   };
+
+  // Show an AI evidence quote on the page (uses the normal find-in-document).
+  const showQuote = (q: string) => {
+    setTab("document");
+    openFind();
+    setFindQ(q);
+    setCommitted(q);
+    setCur(0);
+    setSearching(isPdf || isImage || hasRendition);
+  };
+  const canSeeRestricted = user.role === "admin" || (user.permissions || []).some((x) => x === "restricted" || x === "admin");
 
   const segStyle = (on: boolean): React.CSSProperties => ({
     border: "none",
@@ -505,6 +517,7 @@ export default function FilePage() {
 
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
+          <ClassificationPanel file={file} userId={user._id} canSeeRestricted={canSeeRestricted} onChanged={load} onShowQuote={showQuote} />
           {(file.status === "ready" || file.status === "needs_review") && (
             <MetadataPanel fileId={file._id} userId={user._id} initial={file.metadata || {}} status={file.metadataStatus} serverErrors={file.metadataErrors} onSaved={load} />
           )}

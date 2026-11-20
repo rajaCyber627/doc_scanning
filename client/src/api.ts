@@ -50,6 +50,7 @@ export interface FileItem {
   reviewReasons?: { code: string; message: string; stage?: string; page?: number }[];
   duplicateOf?: { kind: string; where: string }[];
   metadata?: Record<string, any>;
+  classification?: Record<string, any> | null;
   metadataStatus?: "missing" | "incomplete" | "complete";
   metadataErrors?: { field: string; message: string }[];
   supersedes?: string | null;

@@ -141,9 +141,11 @@ const textract = {
 
 // Anthropic: returns a fixed overview; tests can queue other replies.
 const replies = [];
+const anthropicCalls = [];
 const anthropic = {
   messages: {
-    create: async () => {
+    create: async (params) => {
+      anthropicCalls.push(params);
       const text =
         replies.length > 0
           ? replies.shift()
@@ -156,11 +158,26 @@ const anthropic = {
     },
   },
 };
+// Classification uses the beta endpoint (server-side fallback). Queue answers in
+// classifyReplies: a string (JSON text) or { stop_reason, text }.
+const classifyReplies = [];
+anthropic.beta = {
+  messages: {
+    create: async (params) => {
+      anthropicCalls.push(params);
+      const r = classifyReplies.length ? classifyReplies.shift() : '{}';
+      const { stop_reason = 'end_turn', text } = typeof r === 'string' ? { text: r } : r;
+      return { model: params.model, stop_reason, content: [{ type: 'text', text }] };
+    },
+  },
+};
 
 function reset() {
   objects.clear();
   multiparts.clear();
   replies.length = 0;
+  classifyReplies.length = 0;
+  anthropicCalls.length = 0;
   jobs.clear();
   textractState.mode = 'subscription';
   textractState.calls.length = 0;
@@ -179,6 +196,8 @@ module.exports = {
   __multiparts: multiparts,
   __putPart: putPart,
   __replies: replies,
+  __classifyReplies: classifyReplies,
+  __anthropicCalls: anthropicCalls,
   __textract: textractState,
   __reset: reset,
 };

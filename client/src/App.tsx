@@ -13,6 +13,7 @@ import AskPage from "./pages/AskPage";
 import BatchesPage from "./features/batches/BatchesPage";
 import BatchPage from "./features/batches/BatchPage";
 import TaxonomyPage from "./features/metadata/TaxonomyPage";
+import ReviewQueuePage from "./features/classification/ReviewQueuePage";
 import { isAuthed } from "./auth";
 
 function Protected({ children }: { children: JSX.Element }) {
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
         <Route path="/files/:id" element={<Protected><FilePage /></Protected>} />
         <Route path="/batches" element={<Protected><BatchesPage /></Protected>} />
+        <Route path="/review" element={<Protected><ReviewQueuePage /></Protected>} />
         <Route path="/taxonomy" element={<Protected><TaxonomyPage /></Protected>} />
         <Route path="/batches/:id" element={<Protected><BatchPage /></Protected>} />
         <Route path="/folders/:id" element={<Protected><FolderPage /></Protected>} />

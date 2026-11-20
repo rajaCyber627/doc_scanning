@@ -13,6 +13,7 @@ const { buildRendition } = require('../documents/rendition');
 const OcrPage = require('../ocr/OcrPage.model');
 const { indexDocument, syncToPartner } = require('../search/indexer');
 const { checkDuplicates } = require('../duplicates/service');
+const { runClassification } = require('../classification/service');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -91,8 +92,10 @@ const STAGES = [
   {
     name: 'classify',
     blocking: true,
-    // Document type / person / metadata suggestions — implemented in P10.
-    async run() {},
+    // AI suggestions for type / person / confidentiality / details → review queue.
+    async run(ctx) {
+      return runClassification(ctx.file);
+    },
   },
   {
     name: 'index',
