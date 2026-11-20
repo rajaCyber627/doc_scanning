@@ -8,7 +8,7 @@ router.get('/api/search', async (req, res) => {
     const { userId, q } = req.query;
     const needle = String(q || '').trim().toLowerCase();
     if (!needle) return res.json({ results: [] });
-    const files = await File.find({ userId, status: 'ready' }).select('fileName rawText folderId');
+    const files = await File.find({ userId, status: { $in: ['ready', 'needs_review'] } }).select('fileName rawText folderId');
     const results = [];
     for (const f of files) {
       const text = (f.rawText || '').toLowerCase();

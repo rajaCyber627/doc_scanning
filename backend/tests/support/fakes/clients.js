@@ -105,20 +105,28 @@ const subscriptionError = () => {
 };
 // Set textractState.mode = 'ok' in a test to simulate an activated account; every
 // object OCR'd is recorded in textractState.calls.
-const textractState = { mode: 'subscription', calls: [] };
+// textractState.results: Map(s3 key | 'default' → Textract blocks) to script results;
+// textractState.byCall: array of blocks returned in order (for re-OCR after straightening).
+const { buildBlocks } = require('../../../src/providers/ocr/buildBlocks');
+const textractState = { mode: 'subscription', calls: [], results: new Map(), byCall: [], features: [] };
+const defaultBlocks = (key) =>
+  buildBlocks([{ lines: [{ text: `OCR text of ${key.split('/').pop()}` }, { text: 'Employee: John Smith' }, { text: 'Employee ID: 1045' }] }]);
 const okResult = (key) => ({
   JobStatus: 'SUCCEEDED',
-  Blocks: [
-    { BlockType: 'LINE', Text: `OCR text of ${key.split('/').pop()}` },
-    { BlockType: 'WORD', Text: 'OCR', Page: 1, Geometry: { BoundingBox: { Left: 0.1, Top: 0.1, Width: 0.1, Height: 0.05 } } },
-  ],
+  Blocks: textractState.byCall.length ? textractState.byCall.shift() : textractState.results.get(key) || textractState.results.get('default') || defaultBlocks(key),
 });
 const jobs = new Map();
 const start = (p, cb) => {
   if (textractState.mode !== 'ok') return cb(subscriptionError());
+  if (textractState.denyAnalysis && p.FeatureTypes) {
+    const e = new Error('User is not authorized to perform: textract:StartDocumentAnalysis');
+    e.code = 'AccessDeniedException';
+    return cb(e);
+  }
   const key = p.DocumentLocation.S3Object.Name;
   if (!objects.has(key)) return cb(noSuchKey());
   textractState.calls.push(key);
+  textractState.features.push(p.FeatureTypes || null);
   const JobId = `job-${jobs.size + 1}`;
   jobs.set(JobId, key);
   return cb(null, { JobId });
@@ -156,6 +164,10 @@ function reset() {
   jobs.clear();
   textractState.mode = 'subscription';
   textractState.calls.length = 0;
+  textractState.results.clear();
+  textractState.byCall.length = 0;
+  textractState.features.length = 0;
+  textractState.denyAnalysis = false;
 }
 
 module.exports = {

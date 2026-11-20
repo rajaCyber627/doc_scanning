@@ -20,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exif-parser": "^0.1.12",
     "express": "^4.19.2",
     "heic-convert": "^2.1.0",
     "jimp": "^0.22.12",

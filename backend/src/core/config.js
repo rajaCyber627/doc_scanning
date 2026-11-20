@@ -56,6 +56,17 @@ module.exports = {
     sofficePath: env.SOFFICE_PATH || '', // LibreOffice for high-fidelity Office → PDF (optional)
   },
 
+  ocr: {
+    provider: ['textract', 'fixture'].includes(env.OCR_PROVIDER) ? env.OCR_PROVIDER : 'textract',
+    fixtureDir: env.OCR_FIXTURE_DIR || require('path').join(__dirname, '..', '..', 'fixtures', 'ocr'),
+    forms: env.OCR_FORMS !== 'false', // read form fields + tables (AnalyzeDocument)
+    // Quality flags → document goes to "needs review"
+    lowConfidence: int(env.OCR_LOW_CONFIDENCE, 80), // average word confidence (%) per page
+    blankPageWords: int(env.OCR_BLANK_PAGE_WORDS, 3), // fewer words than this = blank page
+    handwritingRatio: Number(env.OCR_HANDWRITING_RATIO || 0.3), // share of handwritten words
+    skewDegrees: Number(env.OCR_SKEW_DEGREES || 3), // tilt worth flagging / straightening
+  },
+
   upload: {
     maxBytes: int(env.UPLOAD_MAX_MB, 100) * 1024 * 1024,
     // Files above this go to S3 as multipart (parallel parts, resumable per part).

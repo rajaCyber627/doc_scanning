@@ -10,6 +10,7 @@ const { s3, BUCKET } = require('../../providers/storage/client');
 const { enqueueDocument } = require('../intake/pipeline');
 const { emitAudit } = require('../../core/audit');
 const { removeDocument } = require('./removeDocument');
+const OcrPage = require('../ocr/OcrPage.model');
 
 // In-memory upload; the buffer goes straight to S3 (no local disk needed).
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -193,7 +194,13 @@ router.get('/api/files/:id/geometry', async (req, res) => {
   try {
     const file = await File.findById(req.params.id).select('words');
     if (!file) return res.status(404).json({ message: 'File not found' });
-    res.json({ words: file.words || [] });
+    // Per-page OCR results (P06); optional ?page=N. Older documents kept words on the File.
+    const q = { fileId: file._id };
+    if (req.query.page) q.page = Number(req.query.page);
+    const pages = await OcrPage.find(q).select('page words').sort({ page: 1 }).lean();
+    if (!pages.length) return res.json({ words: file.words || [] });
+    const words = pages.flatMap((p) => p.words.map((w) => ({ text: w.t, page: p.page, x: w.x, y: w.y, w: w.w, h: w.h, confidence: w.c })));
+    res.json({ words });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal server error' });

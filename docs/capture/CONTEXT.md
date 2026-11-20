@@ -252,7 +252,11 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   (`ocrSourceS3Key`) for OCR + display; zip-bomb/password/executable protections;
   `UserFacingError` in core/errors for pre-worded failures. Client: PDF view for new formats,
   original download link, Related documents sidebar.
-- [ ] P06 OCR
+- [x] P06 OCR — `providers/ocr` (textract with FORMS+TABLES and text fallback, fixture provider,
+  `normalize.js`, `buildBlocks.js`), `features/ocr` (service, OcrPage per-page storage — no word cap,
+  quality reasons, EXIF upright + straighten-and-reread for single images, searchable PDF). Generic
+  `File.reviewReasons` → runner sets `needs_review`; `POST /api/files/:id/review` resolves (history in
+  `resolvedReviewReasons`). needs_review docs are openable/askable/searchable. See `docs/capture/ocr.md`.
 - [ ] P07 Full-text indexing
 - [ ] P08 Duplicate detection
 - [ ] P09 Metadata entry

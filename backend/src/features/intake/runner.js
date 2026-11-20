@@ -41,7 +41,7 @@ async function runPipeline(fileId, { buffer = null, stages = STAGES } = {}) {
     if (done.has(stage.name)) continue;
 
     // All blocking stages finished → the document is usable now.
-    if (!stage.blocking && file.status !== 'ready') {
+    if (!stage.blocking && !['ready', 'needs_review'].includes(file.status)) {
       file = await markReady(file);
       if (!file) return 'missing';
     }
@@ -66,19 +66,28 @@ async function runPipeline(fileId, { buffer = null, stages = STAGES } = {}) {
     }
   }
 
-  if (file.status !== 'ready') file = await markReady(file);
+  if (!['ready', 'needs_review'].includes(file.status)) file = await markReady(file);
   if (file) await File.updateOne({ _id: file._id }, { stage: 'done', attempts: 0 });
   return 'ready';
 }
 
+// Finished: "ready", or "needs_review" when a stage left review reasons.
 async function markReady(file) {
+  const current = await File.findById(file._id).select('reviewReasons').lean();
+  if (!current) return null;
+  const review = (current.reviewReasons || []).length > 0;
   const updated = await File.findByIdAndUpdate(
     file._id,
-    { status: 'ready', error: '', errorCode: '' },
+    { status: review ? 'needs_review' : 'ready', error: '', errorCode: '' },
     { new: true }
   );
   if (updated) {
-    await emitAudit({ userId: updated.userId, action: 'document.ready', documentId: updated._id });
+    await emitAudit({
+      userId: updated.userId,
+      action: review ? 'document.needs_review' : 'document.ready',
+      documentId: updated._id,
+      ...(review ? { details: { reasons: current.reviewReasons.map((x) => x.code) } } : {}),
+    });
     touchBatch(updated);
   }
   return updated;

@@ -9,6 +9,8 @@ import LoadingMessages from "../components/LoadingMessages";
 import PdfViewer from "../components/PdfViewer";
 import ImageViewer from "../components/ImageViewer";
 import RelatedDocuments from "../features/documents/RelatedDocuments";
+import OcrPanel from "../features/ocr/OcrPanel";
+import { getUser } from "../auth";
 import {
   getFile,
   getFileText,
@@ -24,6 +26,7 @@ type Tab = "chat" | "tables" | "document";
 export default function FilePage() {
   const { id } = useParams();
   const nav = useNavigate();
+  const user = getUser()!;
   const [state, setState] = useState<FileDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("chat");
@@ -454,7 +457,8 @@ export default function FilePage() {
                   )
                 ) : isPdf ? (
                   <PdfViewer
-                    url={`/api/files/${file._id}/raw`}
+                    // scanned PDFs: the searchable version (same pages + OCR text layer)
+                    url={file.renditionS3Key ? `/api/files/${file._id}/rendition` : `/api/files/${file._id}/raw`}
                     fileId={file._id}
                     query={committed}
                     activeIndex={cur}
@@ -499,6 +503,7 @@ export default function FilePage() {
 
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
+          <OcrPanel file={file} userId={user._id} onChanged={load} />
           <RelatedDocuments detail={state} />
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-header">About</div>

@@ -45,6 +45,14 @@ export interface FileItem {
   ocrSourceS3Key?: string | null; // converted JPEG for HEIC/GIF/BMP
   parentDocumentId?: string | null;
   childSummary?: { created: number; skipped: { name: string; reason: string }[] };
+  reviewReasons?: { code: string; message: string; stage?: string; page?: number }[];
+  ocr?: {
+    provider: string;
+    pages: number;
+    avgConfidence: number | null;
+    corrected?: boolean;
+    keyValues?: { key: string; value: string; page?: number; confidence?: number }[];
+  } | null;
   createdAt: string;
   summary?: string;
   keyFacts?: { label: string; value: any }[];

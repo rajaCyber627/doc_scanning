@@ -25,6 +25,14 @@ const fileSchema = new mongoose.Schema(
     error: { type: String, default: '' },
 
     // ----- Capture Hub fields (all optional; existing documents keep working) -----
+    // OCR summary (P06): provider, pages, average confidence, form fields (key → value)
+    ocr: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Why a person must check this document (OCR quality, duplicates, classification…).
+    // Any open reason makes the finished document "needs_review" instead of "ready".
+    reviewReasons: { type: Array, default: [] }, // [{ code, message, stage, page? }]
+    resolvedReviewReasons: { type: Array, default: [] }, // history: reason + resolvedAt/By
+    reviewedAt: { type: Date, default: null },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     // Viewing: PDF rendition for formats browsers can't show (P05); converted JPEG for
     // HEIC/GIF/BMP (also what OCR reads). Originals are never modified.
     renditionS3Key: { type: String, default: null },

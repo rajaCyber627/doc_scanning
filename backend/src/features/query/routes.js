@@ -16,7 +16,7 @@ router.post('/api/query', async (req, res) => {
     if (!Array.isArray(fileIds) || !fileIds.length)
       return res.status(400).json({ message: 'Select at least one file' });
 
-    const files = await File.find({ _id: { $in: fileIds }, status: 'ready' });
+    const files = await File.find({ _id: { $in: fileIds }, status: { $in: ['ready', 'needs_review'] } });
     if (!files.length) return res.status(400).json({ message: 'No ready files in the selection' });
 
     let combined = '';
@@ -122,7 +122,7 @@ router.post('/api/files/:id/query', async (req, res) => {
     if (!query || !String(query).trim()) return res.status(400).json({ message: 'Query is required' });
     const file = await File.findById(req.params.id);
     if (!file) return res.status(404).json({ message: 'File not found' });
-    if (file.status !== 'ready') return res.status(400).json({ message: 'File is still being processed' });
+    if (!['ready', 'needs_review'].includes(file.status)) return res.status(400).json({ message: 'File is still being processed' });
 
     const u1 = await userModel.findById(file.userId).select('customInstructions').catch(() => null);
     const raw = await askClaude(file.rawText, file.tablesCsv, query, u1 && u1.customInstructions);

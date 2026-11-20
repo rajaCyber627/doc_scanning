@@ -24,6 +24,9 @@ import {
   ContentHit,
 } from "../api";
 
+// Processed documents can be opened and asked about, including ones awaiting review.
+const isUsable = (f: { status: string }) => f.status === "ready" || f.status === "needs_review";
+
 export default function Documents() {
   const user = getUser()!;
   const nav = useNavigate();
@@ -148,7 +151,7 @@ export default function Documents() {
   }, [files, q]);
   const rootFiles = byFolder.get("__root__") || [];
 
-  const readyIds = (fs: FileItem[]) => fs.filter((f) => f.status === "ready").map((f) => f._id);
+  const readyIds = (fs: FileItem[]) => fs.filter((f) => isUsable(f)).map((f) => f._id);
   const allVisibleReady = useMemo(
     () => readyIds(files.filter(match)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,13 +205,13 @@ export default function Documents() {
         type="checkbox"
         style={{ width: "auto" }}
         checked={selected.has(f._id)}
-        disabled={f.status !== "ready"}
+        disabled={!isUsable(f)}
         onChange={() => toggle(f._id)}
         onClick={(e) => e.stopPropagation()}
       />
       <span
-        style={{ flex: 1, minWidth: 0, cursor: f.status === "ready" ? "pointer" : "default" }}
-        onClick={() => f.status === "ready" && nav(`/files/${f._id}`)}
+        style={{ flex: 1, minWidth: 0, cursor: isUsable(f) ? "pointer" : "default" }}
+        onClick={() => isUsable(f) && nav(`/files/${f._id}`)}
       >
         <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
           📄 {f.fileName}

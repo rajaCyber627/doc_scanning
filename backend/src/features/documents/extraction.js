@@ -1,12 +1,12 @@
 // Text extraction by file type. Returns:
-//   { rawText, tablesCsv, words?, pageCount?, children?, skipped?, convertedImage?,
-//     ocrSourceS3Key?, email? }
+//   { rawText, tablesCsv, pageCount?, children?, skipped?, convertedImage?,
+//     ocrSourceS3Key?, email?, ocr?, reviewReasons? }
 // `children` (emails, archives) are created as their own documents by the intake stage.
 const mammoth = require('mammoth');
 const pdfParse = require('pdf-parse');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
-const { runTextract } = require('../../providers/ocr/textract');
+const { runOcr } = require('../ocr/service');
 const { UserFacingError } = require('../../core/errors');
 const { typeForName, extOf } = require('../upload/fileTypes');
 const office = require('./formats/office');
@@ -17,7 +17,7 @@ const { assertSafeZipDocument } = require('./formats/zipSafety');
 
 const stripBom = (s) => s.replace(/^﻿/, '');
 
-async function extractPdf(s3Key, buf) {
+async function extractPdf(file, buf) {
   // Try the free local text layer first; OCR only when there is little or no text
   // (i.e. a scanned / image-only PDF).
   try {
@@ -30,22 +30,25 @@ async function extractPdf(s3Key, buf) {
       throw new UserFacingError('PASSWORD_PROTECTED', 'This PDF is password-protected. Remove the password and upload it again.');
     // unreadable text layer — fall through to OCR
   }
-  return runTextract(s3Key);
+  return runOcr(file); // scanned / image-only PDF
 }
 
-async function extractImage(type, s3Key, buf, fileId) {
-  if (!type.convertForOcr) return runTextract(s3Key);
-  // HEIC / GIF / BMP: OCR (and browsers) need a JPEG; keep it next to the original.
-  const convertedImage = await toJpeg(type.ext, buf);
-  const ocrSourceS3Key = `${s3Key}.converted.jpg`;
-  await storage.putStream(ocrSourceS3Key, convertedImage, 'image/jpeg');
-  // Record it right away, so it is displayed and cleaned up even if OCR then fails.
-  if (fileId) await File.updateOne({ _id: fileId }, { ocrSourceS3Key });
-  const result = await runTextract(ocrSourceS3Key);
-  return { ...result, convertedImage, ocrSourceS3Key };
+async function extractImage(type, file, buf) {
+  // Multi-page TIFFs go straight to OCR (pages are handled by the provider).
+  if (type.ext === 'tif' || type.ext === 'tiff') return runOcr(file);
+  if (!type.convertForOcr) return runOcr(file, { image: { buffer: buf, mime: type.mime } });
+  // HEIC / GIF / BMP: OCR (and browsers) need a JPEG; keep it next to the original and
+  // record it right away so it is displayed and cleaned up even if OCR then fails.
+  const jpeg = await toJpeg(type.ext, buf);
+  const key = `${file.s3Key}.converted.jpg`;
+  await storage.putStream(key, jpeg, 'image/jpeg');
+  await File.updateOne({ _id: file._id }, { ocrSourceS3Key: key });
+  return runOcr(file, { ocrKey: key, image: { buffer: jpeg, mime: 'image/jpeg' } });
 }
 
-async function extractContent({ s3Key, mimeType, fileName, buffer, fileId }) {
+/** @param file the File document (s3Key, fileName, mimeType, _id, sha256) */
+async function extractContent(file, buffer) {
+  const { s3Key, mimeType, fileName } = file;
   const buf = buffer || (await storage.s3GetBuffer(s3Key));
   // Older documents may have been stored before every type was registered.
   const type = typeForName(fileName) || (String(mimeType).includes('pdf') ? typeForName('x.pdf') : null);
@@ -53,9 +56,9 @@ async function extractContent({ s3Key, mimeType, fileName, buffer, fileId }) {
 
   switch (kind) {
     case 'pdf':
-      return extractPdf(s3Key, buf);
+      return extractPdf(file, buf);
     case 'image':
-      return extractImage(type || typeForName('x.png'), s3Key, buf, fileId);
+      return extractImage(type || typeForName('x.png'), file, buf);
     case 'docx': {
       await assertSafeZipDocument(buf);
       const { value } = await mammoth.extractRawText({ buffer: buf });

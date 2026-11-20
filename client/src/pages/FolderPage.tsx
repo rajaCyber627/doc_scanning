@@ -24,6 +24,9 @@ import {
 
 type Tab = "chat" | "tables" | "files";
 
+// Processed documents can be opened and asked about, including ones awaiting review.
+const isUsable = (f: { status: string }) => f.status === "ready" || f.status === "needs_review";
+
 export default function FolderPage() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -79,7 +82,7 @@ export default function FolderPage() {
     );
 
   const { folder, files, tables } = state;
-  const readyIds = files.filter((f) => f.status === "ready").map((f) => f._id);
+  const readyIds = files.filter((f) => isUsable(f)).map((f) => f._id);
   const processing = files.filter((f) => f.status === "processing").length;
 
   const removeTable = async (t: SavedTableItem) => {
@@ -181,8 +184,8 @@ export default function FolderPage() {
           {files.map((f) => (
             <div
               key={f._id}
-              className={"row" + (f.status === "ready" ? " clickable" : "")}
-              onClick={() => f.status === "ready" && nav(`/files/${f._id}`)}
+              className={"row" + (isUsable(f) ? " clickable" : "")}
+              onClick={() => isUsable(f) && nav(`/files/${f._id}`)}
             >
               <span>📄</span>
               <div style={{ flex: 1, minWidth: 0 }}>

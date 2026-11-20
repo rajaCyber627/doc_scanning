@@ -10,6 +10,7 @@ const config = require('../../core/config');
 const storage = require('../../providers/storage');
 const { createChildren } = require('../documents/children');
 const { buildRendition } = require('../documents/rendition');
+const OcrPage = require('../ocr/OcrPage.model');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -51,14 +52,8 @@ const STAGES = [
     // AI overview.
     async run(ctx) {
       const f = ctx.file;
-      const extracted = await extractContent({
-        s3Key: f.s3Key,
-        mimeType: f.mimeType,
-        fileName: f.fileName,
-        buffer: await ctx.getBuffer(),
-        fileId: f._id,
-      });
-      const { rawText, tablesCsv, words } = extracted;
+      const extracted = await extractContent(f, await ctx.getBuffer());
+      const { rawText, tablesCsv } = extracted;
       ctx.convertedImage = extracted.convertedImage || null; // reused by the render stage
       let childSummary;
       if (extracted.children) {
@@ -69,7 +64,7 @@ const STAGES = [
       return {
         ...text,
         tablesCsv: String(tablesCsv || '').slice(0, config.text.maxStoredChars),
-        words: Array.isArray(words) ? words : [],
+        words: [], // word boxes now live per page in OcrPage (no size cap)
         summary: overview.summary || '',
         keyFacts: Array.isArray(overview.keyFacts) ? overview.keyFacts : [],
         suggestedQuestions: Array.isArray(overview.suggestedQuestions) ? overview.suggestedQuestions : [],
@@ -77,6 +72,9 @@ const STAGES = [
         ...(extracted.ocrSourceS3Key ? { ocrSourceS3Key: extracted.ocrSourceS3Key } : {}),
         ...(childSummary ? { childSummary } : {}),
         ...(extracted.email ? { 'metadata.email': extracted.email } : {}),
+        ...(extracted.ocr ? { ocr: extracted.ocr } : {}),
+        // OCR quality problems replace earlier OCR reasons; other stages' reasons stay
+        reviewReasons: [...(f.reviewReasons || []).filter((r) => r.stage !== 'ocr'), ...(extracted.reviewReasons || [])],
       };
     },
   },
@@ -103,7 +101,8 @@ const STAGES = [
       if (f.renditionS3Key) return undefined;
       let convertedImage = ctx.convertedImage;
       if (!convertedImage && f.ocrSourceS3Key) convertedImage = await storage.s3GetBuffer(f.ocrSourceS3Key);
-      const r = await buildRendition({ fileName: f.fileName, buffer: await ctx.getBuffer(), rawText: f.rawText, convertedImage });
+      const ocrPages = await OcrPage.find({ fileId: f._id }).select('page words').sort({ page: 1 }).lean();
+      const r = await buildRendition({ fileName: f.fileName, buffer: await ctx.getBuffer(), rawText: f.rawText, convertedImage, ocrPages });
       if (!r) return undefined;
       const key = `${f.s3Key}.view.pdf`;
       await storage.putStream(key, r.pdf, 'application/pdf');

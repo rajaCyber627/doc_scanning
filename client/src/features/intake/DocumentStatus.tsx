@@ -17,6 +17,7 @@ export interface StatusDoc {
   status: "processing" | "ready" | "needs_review" | "failed";
   stage?: string | null;
   error?: string;
+  reviewReasons?: { message: string }[];
 }
 
 /** Status badge for a document: current step, ready, or the failure reason + Retry. */
@@ -42,8 +43,11 @@ export default function DocumentStatus({
   }
   if (doc.status === "needs_review") {
     return (
-      <span className="badge review" title={doc.error || "A person needs to check this document"}>
-        <span className="dot" /> Needs review
+      <span className="doc-failed">
+        <span className="badge review" title={doc.reviewReasons?.map((r) => r.message).join("\n") || "A person needs to check this document"}>
+          <span className="dot" /> Needs review
+        </span>
+        {showReason && doc.reviewReasons?.[0] && <span className="doc-failed-reason" style={{ color: "var(--attention)" }}>{doc.reviewReasons[0].message}</span>}
       </span>
     );
   }
