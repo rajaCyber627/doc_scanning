@@ -13,6 +13,7 @@ import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
 import Highlighted from "../features/search/Highlighted";
 import BulkEditModal from "../features/metadata/BulkEditModal";
+import MergeModal from "../features/merging/MergeModal";
 import DropZone, { BrowseButtons, DropTargetInfo, useDropTarget, useDropZone } from "../features/upload/DropZone";
 import {
   listFiles,
@@ -37,6 +38,7 @@ export default function Documents() {
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [uploadCfg, setUploadCfg] = useState<UploadConfig | null>(null);
   const [bulkEdit, setBulkEdit] = useState(false);
+  const [merging, setMerging] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState<{ ids: string[]; label: string; folderId?: string } | null>(null);
@@ -275,6 +277,9 @@ export default function Documents() {
           <button className="btn btn-sm" disabled={selected.size === 0} onClick={() => setBulkEdit(true)}>
             ✎ Edit details{selected.size ? ` (${selected.size})` : ""}
           </button>
+          <button className="btn btn-sm" disabled={selected.size < 2} title="Combine the selected documents (or some of their pages) into one" onClick={() => setMerging(true)}>
+            ⧉ Merge{selected.size >= 2 ? ` (${selected.size})` : ""}
+          </button>
         </div>
 
         {mode === "content" && q.trim() ? (
@@ -370,6 +375,7 @@ export default function Documents() {
         )}
       </DropZone>
 
+      {merging && <MergeModal userId={user._id} fileIds={Array.from(selected)} onClose={() => setMerging(false)} />}
       {bulkEdit && <BulkEditModal userId={user._id} fileIds={Array.from(selected)} onClose={() => setBulkEdit(false)} onDone={load} />}
 
       <UploadTray

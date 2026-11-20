@@ -149,7 +149,7 @@ function withoutStage(reasons) {
 async function runClassification(file) {
   const settings = await getSettings();
   // Details printed on a separator sheet (or chosen when splitting) are trusted hints.
-  const prefill = (file.splitFrom && file.splitFrom.prefill) || {};
+  const prefill = ((file.splitFrom || file.mergeOf || {}).prefill) || {};
   const hasPrefill = !!(prefill.documentType || prefill.employeeId || prefill.personId);
   if (!settings.aiEnabled && !hasPrefill) return { classification: { status: 'disabled', at: new Date() } };
   const pages = await OcrPage.find({ fileId: file._id }).select('page text').sort({ page: 1 }).lean();
@@ -189,7 +189,14 @@ async function runClassification(file) {
   // Restricted-first: when the AI is unsure about confidentiality, protect the record.
   const unsureConfidentiality = !(answer.confidence.confidentiality >= RESTRICTED_FIRST_BELOW);
   if (match.nameMismatch) answer.confidence.person = Math.min(answer.confidence.person, 0.5);
-  const restricted = answer.restrictedLikely || answer.confidentialityLevel === 'Restricted' || (type && type.defaultConfidentiality === 'Restricted') || unsureConfidentiality;
+  const restricted =
+    answer.restrictedLikely ||
+    answer.confidentialityLevel === 'Restricted' ||
+    (type && type.defaultConfidentiality === 'Restricted') ||
+    unsureConfidentiality ||
+    // already restricted (part of a restricted original, a merge with restricted pages…):
+    // only a permitted person may lower it, never the AI
+    isRestricted(file.confidentiality);
   const suggestion = {
     documentType: type ? type.key : null,
     documentTypeName: type ? type.name : null,

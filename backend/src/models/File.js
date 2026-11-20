@@ -89,6 +89,10 @@ const fileSchema = new mongoose.Schema(
     splitLock: { type: String, default: null },
     splitFrom: { type: mongoose.Schema.Types.Mixed, default: null },
     splitSuggestion: { type: mongoose.Schema.Types.Mixed, default: null }, // AI-suggested cuts
+    // Merge (P12): { sources: [fileIds], pages: [{ fileId, page, rotate }], pageTexts, hasTextLayer, prefill }
+    mergeOf: { type: mongoose.Schema.Types.Mixed, default: null },
+    // confidentiality can never be set below this (a merge takes its strictest source)
+    confidentialityFloor: { type: String, default: null },
 
     // ----- Pipeline tracking -----
     stage: { type: String, default: null }, // current stage, or 'done'

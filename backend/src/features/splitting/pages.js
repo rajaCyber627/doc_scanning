@@ -5,8 +5,7 @@
 //   page text:   OCR pages (P06) when the document was OCR'd, else the PDF's own text.
 //   page image:  the scan image embedded in a page (JPEG), when there is one — used to
 //   read QR separator sheets.
-const pdfParse = require('pdf-parse');
-const { FALLBACK } = require('../documents/formats/pdfText');
+const { parsePdf } = require('../documents/formats/pdfText');
 const { PDFDocument, PDFName, PDFRawStream, PDFDict } = require('pdf-lib');
 const storage = require('../../providers/storage');
 const OcrPage = require('../ocr/OcrPage.model');
@@ -18,35 +17,38 @@ const isPdf = (file) => /pdf/i.test(file.mimeType || '') || /\.pdf$/i.test(file.
 async function pageSource(file, original = null) {
   if (isPdf(file)) return { buffer: original || (await storage.s3GetBuffer(file.s3Key)), from: 'original', hasTextLayer: false };
   if (file.renditionS3Key) return { buffer: await storage.s3GetBuffer(file.renditionS3Key), from: 'rendition', hasTextLayer: true };
+  // a PNG / JPEG (or converted photo) without a PDF view: wrap the image as one page
+  const imageKey = file.ocrSourceS3Key || (/^image\/(png|jpeg)$/i.test(file.mimeType || '') ? file.s3Key : null);
+  if (imageKey) return { buffer: await imagePdf(await storage.s3GetBuffer(imageKey)), from: 'image', hasTextLayer: false };
   throw new UserFacingError('NO_PAGES', 'The page view of this document is still being prepared. Try again in a moment.', false);
+}
+
+async function imagePdf(img) {
+  const doc = await PDFDocument.create();
+  const isPng = img[0] === 0x89 && img[1] === 0x50;
+  const e = isPng ? await doc.embedPng(img) : await doc.embedJpg(img);
+  const scale = Math.min(612 / e.width, 792 / e.height, 1);
+  doc.addPage([e.width * scale, e.height * scale]).drawImage(e, { x: 0, y: 0, width: e.width * scale, height: e.height * scale });
+  return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
 
 /** Per-page text of a PDF (its text layer). */
 async function pdfPageTexts(buffer) {
-  const run = async (version) => {
-    const texts = [];
-    await pdfParse(buffer, {
-      ...(version ? { version } : {}),
-      pagerender: (pageData) =>
-        pageData.getTextContent({ normalizeWhitespace: true }).then((tc) => {
-          let last;
-          let s = '';
-          for (const item of tc.items) {
-            s += last === undefined || last === item.transform[5] ? (s ? ' ' : '') + item.str : `\n${item.str}`;
-            last = item.transform[5];
-          }
-          texts[pageData.pageIndex] = s;
-          return s;
-        }),
-    });
-    return Array.from(texts, (t) => t || '');
-  };
-  try {
-    return await run(null);
-  } catch (e) {
-    if (/password/i.test(`${e && e.name} ${e && e.message}`)) throw e;
-    return run(FALLBACK);
-  }
+  const texts = [];
+  await parsePdf(buffer, {
+    pagerender: (pageData) =>
+      pageData.getTextContent({ normalizeWhitespace: true }).then((tc) => {
+        let last;
+        let s = '';
+        for (const item of tc.items) {
+          s += last === undefined || last === item.transform[5] ? (s ? ' ' : '') + item.str : `\n${item.str}`;
+          last = item.transform[5];
+        }
+        texts[pageData.pageIndex] = s;
+        return s;
+      }),
+  });
+  return Array.from(texts, (t) => t || '');
 }
 
 /** [{ page, text, wordCount }] for every page of the page source. */

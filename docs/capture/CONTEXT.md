@@ -291,10 +291,16 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   with reasons; service: validatePlan, applySplit (atomic lock, parts as PDFs with derivedFrom/
   splitFrom, OCR/text reused, original gets splitInto and leaves search/handoff/dedupe), autoSplit
   in new blocking `separate` stage; lineage). Classification uses splitFrom.prefill; name/ID
-  mismatch flagged. pdf-parse falls back to pdf.js 2.0 (`documents/formats/pdfText.js`). Client
+  mismatch flagged. All pdf-parse calls go through `documents/formats/pdfText.js`. Client
   SplitPage `/files/:id/pages` (react-pdf thumbnails, cuts, rotate, remove, preview), PagesCard,
   SeparatorSheetCard. See `docs/capture/splitting.md`.
-- [ ] P12 Document merging
+- [x] P12 Document merging — `features/merging` (preview: sources, person/type conflicts,
+  strictest confidentiality, mixedRestricted; merge: ordered pages [{fileId,page,rotate}] copied
+  from each source's page source, mergeOf.pageTexts + OcrPage words remapped, derivedFrom,
+  optional supersede, audit document.merged). File.confidentialityFloor enforced in
+  applyMetadata; already-restricted docs always go to the restricted queue. pdfText.js fixes
+  pdf-parse's pooled-Buffer bug. Client MergeModal (drag/←→ reorder, rotate, leave out, conflicts,
+  restricted acknowledgement) from the Documents bulk bar. See `docs/capture/merging.md`.
 - [ ] P13 Scanning
 - [ ] P14 Batch scanning
 - [ ] P15 Email capture

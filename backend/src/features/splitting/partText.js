@@ -1,6 +1,6 @@
 // Text of a split part, taken from the original at split time — never read or OCR'd
 // (or charged for) a second time: OCR'd originals → the part's copied OcrPage records;
-// digital originals → splitFrom.pageTexts.
+// digital originals → splitFrom.pageTexts. Merged documents (P12) → mergeOf.pageTexts.
 const OcrPage = require('../ocr/OcrPage.model');
 const { qualityReasons } = require('../ocr/quality');
 
@@ -11,9 +11,11 @@ const csvCell = (v) => {
 
 /** @returns null when the part has no copied OCR pages (digital PDF → normal extraction) */
 async function partText(file) {
-  if (!file.splitFrom) return null;
-  if (Array.isArray(file.splitFrom.pageTexts)) {
-    return { rawText: file.splitFrom.pageTexts.join('\n\n'), tablesCsv: '', pageCount: file.splitFrom.pageTexts.length };
+  const origin = file.splitFrom || file.mergeOf;
+  if (!origin) return null;
+  // merged documents always carry every page's text (some pages may also have OCR boxes)
+  if (Array.isArray(origin.pageTexts) && (file.mergeOf || !(await OcrPage.exists({ fileId: file._id })))) {
+    return { rawText: origin.pageTexts.join('\n\n'), tablesCsv: '', pageCount: origin.pageTexts.length };
   }
   const pages = await OcrPage.find({ fileId: file._id }).sort({ page: 1 }).lean();
   if (!pages.length) return null;

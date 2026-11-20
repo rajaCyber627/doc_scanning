@@ -1,16 +1,12 @@
-// pdf-parse with a fallback: its default pdf.js (1.10) rejects some valid PDFs (e.g.
-// "bad XRef entry" on pages copied by pdf-lib); the newer bundled pdf.js reads them.
+// pdf-parse, safely. pdf-parse hands its input straight to pdf.js, which reads the whole
+// underlying ArrayBuffer. Small Node Buffers are slices of a shared memory pool, so pdf.js
+// would read neighbouring bytes and fail at random ("bad XRef entry", "Unknown
+// compression method"). A standalone copy makes every read deterministic.
 const pdfParse = require('pdf-parse');
 
-const FALLBACK = 'v2.0.550';
+const isPassword = (e) => /password/i.test(`${e && e.name} ${e && e.message}`);
+const own = (buffer) => new Uint8Array(buffer); // copies into its own ArrayBuffer
 
-async function parsePdf(buffer, opts = {}) {
-  try {
-    return await pdfParse(buffer, opts);
-  } catch (e) {
-    if (/password/i.test(`${e && e.name} ${e && e.message}`)) throw e;
-    return pdfParse(buffer, { ...opts, version: FALLBACK });
-  }
-}
+const parsePdf = (buffer, opts = {}) => pdfParse(own(buffer), opts);
 
-module.exports = { parsePdf, FALLBACK };
+module.exports = { parsePdf, isPassword };

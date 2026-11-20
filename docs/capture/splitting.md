@@ -98,9 +98,8 @@ work.
 
 ## Notes
 
-- pdf-parse's default pdf.js (1.10) rejects some valid PDFs ("bad XRef entry"). Text extraction
-  now falls back to its bundled pdf.js 2.0 (`documents/formats/pdfText.js`). Parts are saved with
-  a classic xref table.
+- pdf-parse read small PDFs unreliably (Node buffer-pool bug, fixed in P12 — see `merging.md`).
+  Parts are saved with a classic xref table for the widest reader compatibility.
 - QR codes are read from pages that carry a JPEG scan image (scanned PDFs and TIFF views). Printed
   sheets in digital PDFs are found by their text line.
 

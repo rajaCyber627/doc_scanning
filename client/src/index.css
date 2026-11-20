@@ -964,3 +964,11 @@ input[type="checkbox"]:focus-visible {
 .split-thumb figcaption { display: flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: 12px; border-top: 1px solid var(--border); }
 .split-thumb.small { border-radius: 4px; }
 .split-thumb-ph { background: var(--overlay); }
+
+/* --- merging (P12) --- */
+.merge-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.merge-item { width: 122px; cursor: grab; }
+.merge-item.dragging { opacity: 0.4; }
+.merge-item figcaption { padding: 2px 4px; }
+.merge-item figcaption .btn { padding: 0 4px; min-width: 0; }
+.merge-src { font-size: 11px; padding: 0 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

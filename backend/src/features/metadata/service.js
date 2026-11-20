@@ -164,6 +164,8 @@ function validate(md, fields) {
 }
 
 const LEVEL_TO_CONFIDENTIALITY = { General: 'general', Confidential: 'confidential', Restricted: 'restricted' };
+const CONFIDENTIALITY_TO_LEVEL = { general: 'General', confidential: 'Confidential', restricted: 'Restricted' };
+const RANK = { general: 1, confidential: 2, restricted: 3 };
 
 async function loadVisible(fileId, userId) {
   if (!mongoose.isValidObjectId(fileId)) throw new MetadataError(404, 'File not found');
@@ -192,12 +194,17 @@ async function applyMetadata(file, input, actorId, { auditAction = 'metadata.cha
   const { metadata, errors, fields } = await normalize(input, before);
   const missing = validate(metadata, fields);
   const allErrors = [...errors, ...missing];
+  // a merged document never drops below its strictest source (P12)
+  const floor = file.confidentialityFloor;
+  if (floor && RANK[LEVEL_TO_CONFIDENTIALITY[metadata.confidentialityLevel]] < RANK[floor]) {
+    metadata.confidentialityLevel = CONFIDENTIALITY_TO_LEVEL[floor];
+  }
   const changes = diff(before, metadata);
-  const level = metadata.confidentialityLevel;
   file.metadata = metadata;
   file.markModified('metadata');
   file.metadataErrors = allErrors;
   file.metadataStatus = allErrors.length ? (Object.keys(metadata).some((k) => !SYSTEM_KEYS.includes(k)) ? 'incomplete' : 'missing') : 'complete';
+  const level = metadata.confidentialityLevel;
   if (level && LEVEL_TO_CONFIDENTIALITY[level]) file.confidentiality = LEVEL_TO_CONFIDENTIALITY[level];
   await file.save();
   if (changes.length) {

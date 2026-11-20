@@ -104,7 +104,7 @@ const STAGES = [
     // its documents automatically. The original stays, linked to its parts.
     async run(ctx) {
       const f = ctx.file;
-      if (f.splitFrom || !(f.pageCount > 1)) return undefined;
+      if (f.splitFrom || f.mergeOf || !(f.pageCount > 1)) return undefined;
       // scanned TIFFs: build the page view now (the splitter cuts its pages)
       if (!/pdf/i.test(f.mimeType || '') && !f.renditionS3Key) {
         const r = await renderView(ctx);
@@ -148,7 +148,7 @@ const STAGES = [
     async run(ctx) {
       const f = ctx.file;
       // parts cut from a PDF view already carry its text layer
-      if (f.renditionS3Key || (f.splitFrom && f.splitFrom.hasTextLayer)) return undefined;
+      if (f.renditionS3Key || (f.splitFrom && f.splitFrom.hasTextLayer) || (f.mergeOf && f.mergeOf.hasTextLayer)) return undefined;
       return renderView(ctx);
     },
   },
