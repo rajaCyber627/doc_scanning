@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useDropzone } from "react-dropzone";
 import { message } from "antd";
 import dayjs from "dayjs";
 import AppShell from "../components/AppShell";
@@ -12,6 +11,7 @@ import UploadTray from "../features/upload/UploadTray";
 import { getUploadConfig, UploadConfig, errorMessage } from "../features/upload/uploadApi";
 import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
+import DropZone, { BrowseButtons, DropTargetInfo, useDropTarget, useDropZone } from "../features/upload/DropZone";
 import {
   listFiles,
   listFolders,
@@ -125,37 +125,14 @@ export default function Documents() {
     uploadAsBatch(files, { name: name || undefined });
   };
 
-  // Hidden picker used by a folder's "Add" button to upload into that set.
-  const addRef = useRef<HTMLInputElement>(null);
-  const pendingFolder = useRef<string | null>(null);
-  const addToFolder = (folderId: string) => {
-    pendingFolder.current = folderId;
-    addRef.current?.click();
+  // Everything dropped or picked arrives here (already validated by DropZone).
+  // Dropped/picked onto a set → added to that set; elsewhere → root (or a new set).
+  const handleFiles = (list: File[], target: DropTargetInfo) => {
+    if (target.folderId) {
+      if (list.length > 1) uploadAsBatch(list, { folderId: target.folderId });
+      else pushFiles(list, target.folderId);
+    } else beginUpload(list);
   };
-  const onAddPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
-    if (!files.length || !pendingFolder.current) return;
-    if (files.length > 1) uploadAsBatch(files, { folderId: pendingFolder.current });
-    else pushFiles(files, pendingFolder.current);
-  };
-
-  // "Upload folder": the browser's directory picker (keeps each file's relative path).
-  const dirRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    dirRef.current?.setAttribute("webkitdirectory", "");
-    dirRef.current?.setAttribute("directory", "");
-  }, []);
-  const onDirPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
-    if (files.length) setPending(files);
-  };
-
-  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
-    onDrop: (a) => a.length > 0 && beginUpload(a),
-    noClick: true,
-  });
 
   // group + filter
   const match = (f: FileItem) => f.fileName.toLowerCase().includes(q.toLowerCase());
@@ -249,32 +226,15 @@ export default function Documents() {
 
   return (
     <AppShell>
-      <input
-        ref={addRef}
-        type="file"
-        multiple
-        hidden
-        accept={uploadCfg?.accept}
-        onChange={onAddPicked}
-      />
-      <div {...getRootProps()} style={{ outline: isDragActive ? "2px dashed var(--accent)" : "none", outlineOffset: 6, borderRadius: 6 }}>
-        <input {...getInputProps()} />
+      <DropZone onFiles={handleFiles} defaultTarget={{ label: "your documents" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0 }}>Documents</h1>
             <span className="faint" style={{ fontSize: 13 }}>
-              Drop files anywhere · one file → root · multiple → a new set · up to {maxMB} MB each
+              Drag files or a folder anywhere · drop on a set to add to it · up to {maxMB} MB each
             </span>
           </div>
-          <span style={{ display: "flex", gap: 8 }}>
-            <input ref={dirRef} type="file" multiple hidden onChange={onDirPicked} />
-            <button className="btn" onClick={() => dirRef.current?.click()} title="Upload every file in a folder">
-              ＋ Upload folder
-            </button>
-            <button className="btn btn-primary" onClick={open}>
-              {uploads.busy ? "＋ Upload more" : "＋ Upload files"}
-            </button>
-          </span>
+          <BrowseButtons compact />
         </div>
 
         <div className="card" style={{ display: "flex", gap: 8, padding: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
@@ -347,7 +307,7 @@ export default function Documents() {
               const isOpen = expanded.has(folder._id);
               return (
                 <div key={folder._id}>
-                  <div className="row" style={{ background: "var(--canvas)" }}>
+                  <FolderDropRow folderId={folder._id} label={folder.name}>
                     <input
                       type="checkbox"
                       style={{ width: "auto" }}
@@ -368,16 +328,7 @@ export default function Documents() {
                       </span>
                       <span className="label">{fs.length}</span>
                     </span>
-                    <button
-                      className="btn btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToFolder(folder._id);
-                      }}
-                      title="Add files to this set"
-                    >
-                      ＋ Add
-                    </button>
+                    <AddToFolderButton folderId={folder._id} label={folder.name} />
                     <button
                       className="btn btn-sm"
                       disabled={ids.length === 0}
@@ -391,7 +342,7 @@ export default function Documents() {
                     <button className="btn btn-sm btn-danger" onClick={(e) => removeFolder(e, folder)} title="Delete set">
                       ✕
                     </button>
-                  </div>
+                  </FolderDropRow>
                   {isOpen && fs.map((f) => FileRow(f, true))}
                 </div>
               );
@@ -404,7 +355,7 @@ export default function Documents() {
             )}
           </div>
         )}
-      </div>
+      </DropZone>
 
       <UploadTray
         items={uploads.items}
@@ -482,5 +433,37 @@ export default function Documents() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+/** A set's header row that also accepts dropped files (adds them to that set). */
+function FolderDropRow({ folderId, label, children }: { folderId: string; label: string; children: React.ReactNode }) {
+  const { active, props } = useDropTarget({ folderId, label });
+  return (
+    <div
+      className={"row" + (active ? " drop-active" : "")}
+      style={{ background: "var(--canvas)" }}
+      aria-label={`Set ${label} — drop files here to add them`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+function AddToFolderButton({ folderId, label }: { folderId: string; label: string }) {
+  const { openFiles } = useDropZone();
+  return (
+    <button
+      className="btn btn-sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        openFiles({ folderId, label });
+      }}
+      title="Add files to this set"
+      aria-label={`Add files to ${label}`}
+    >
+      ＋ Add
+    </button>
   );
 }

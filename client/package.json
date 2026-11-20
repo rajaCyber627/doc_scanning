@@ -17,6 +17,7 @@
     "antd": "^5.9.4",
     "axios": "^1.18.1",
     "dayjs": "^1.11.10",
+    "file-selector": "^0.6.0",
     "framer-motion": "^10.16.4",
     "fromnow": "^3.0.1",
     "papaparse": "^5.4.1",

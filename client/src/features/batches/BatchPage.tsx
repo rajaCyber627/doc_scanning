@@ -9,6 +9,7 @@ import { useUploads } from "../upload/useUploads";
 import UploadTray from "../upload/UploadTray";
 import { errorMessage } from "../upload/uploadApi";
 import ItemStateBadge from "./ItemStateBadge";
+import DropZone from "../upload/DropZone";
 import {
   getBatch,
   retryFailedInBatch,
@@ -91,6 +92,10 @@ export default function BatchPage() {
   const onResumePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = "";
+    resumeWith(picked);
+  };
+  const resumeWith = (picked: File[]) => {
+    if (!picked.length) return;
     const matchedFiles: File[] = [];
     const indexes: number[] = [];
     const taken = new Set<number>();
@@ -130,6 +135,7 @@ export default function BatchPage() {
 
   return (
     <AppShell>
+      <DropZone onFiles={resumeWith} defaultTarget={{ label: "this batch (resumes unfinished files)" }}>
       <input ref={resumeRef} type="file" multiple hidden onChange={onResumePicked} />
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -260,6 +266,7 @@ export default function BatchPage() {
         ))}
       </div>
 
+      </DropZone>
       <UploadTray
         items={uploads.items}
         onCancel={uploads.cancel}

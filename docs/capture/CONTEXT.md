@@ -239,7 +239,11 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   neutralising), client Batches + Batch pages, folder upload, 4 concurrent uploads, part
   retries. File status gains `needs_review` (set by later stages). Batch ≠ folder: batch is
   intake tracking, folder is organization.
-- [ ] P04 Drag-and-drop
+- [x] P04 Drag-and-drop — client `features/upload/DropZone` (page-wide drops with visual overlay, nested
+  targets via `useDropTarget` e.g. folder rows, folder drops with paths, up-front rejection with
+  reasons, OS clutter skipped, keyboard-accessible `BrowseButtons`, rules from the server even for
+  very early drops). Used on Documents, Set and Batch pages (batch page: drop = resume).
+  Client component tests: `npx react-scripts test` (6 tests).
 - [ ] P05 Electronic document import
 - [ ] P06 OCR
 - [ ] P07 Full-text indexing

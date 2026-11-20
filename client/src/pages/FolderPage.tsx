@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
@@ -9,7 +9,8 @@ import LoadingMessages from "../components/LoadingMessages";
 import { getUser } from "../auth";
 import { useUploads } from "../features/upload/useUploads";
 import UploadTray from "../features/upload/UploadTray";
-import { getUploadConfig, errorMessage } from "../features/upload/uploadApi";
+import { errorMessage } from "../features/upload/uploadApi";
+import DropZone, { BrowseButtons } from "../features/upload/DropZone";
 import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
 import {
@@ -35,8 +36,6 @@ export default function FolderPage() {
   const [tab, setTab] = useState<Tab>("chat");
   const [modal, setModal] = useState<SavedTableItem | null>(null);
   const user = getUser()!;
-  const addRef = useRef<HTMLInputElement>(null);
-  const [accept, setAccept] = useState<string | undefined>(undefined);
   const [lastBatch, setLastBatch] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -55,15 +54,11 @@ export default function FolderPage() {
     return () => clearInterval(t);
   }, [state, load]);
 
-  useEffect(() => {
-    getUploadConfig().then((c) => setAccept(c.accept)).catch(() => {});
-  }, []);
   const uploads = useUploads(user._id, () => {
     load();
   });
-  const onAddPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(e.target.files || []);
-    e.target.value = "";
+  // Dropped or picked files (already validated) are added to this set.
+  const addFiles = (picked: File[]) => {
     if (!picked.length || !id) return;
     if (picked.length === 1) {
       uploads.enqueue(picked, id);
@@ -108,6 +103,7 @@ export default function FolderPage() {
 
   return (
     <AppShell>
+      <DropZone onFiles={addFiles} defaultTarget={{ folderId: folder._id, label: `“${folder.name}”` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
         <button className="btn btn-sm" onClick={() => nav("/documents")}>
           ← Documents
@@ -116,10 +112,9 @@ export default function FolderPage() {
           📁 {folder.name}
         </h2>
         <span className="label">{files.length} files</span>
-        <input ref={addRef} type="file" multiple hidden accept={accept} onChange={onAddPicked} />
-        <button className="btn btn-sm btn-primary" style={{ marginLeft: "auto" }} onClick={() => addRef.current?.click()}>
-          {uploads.busy ? "＋ Add more" : "＋ Add files"}
-        </button>
+        <span style={{ marginLeft: "auto" }}>
+          <BrowseButtons compact target={{ folderId: folder._id, label: folder.name }} />
+        </span>
         <button className="btn btn-sm btn-danger" onClick={removeFolder}>
           Delete set
         </button>
@@ -244,6 +239,7 @@ export default function FolderPage() {
           </div>
         </div>
       )}
+      </DropZone>
     </AppShell>
   );
 }
