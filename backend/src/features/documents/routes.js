@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const config = require('../../core/config');
 const File = require('../../models/File');
 const Folder = require('../../models/Folder');
 const TableResult = require('../tables/TableResult.model');
@@ -8,6 +9,7 @@ const Chunk = require('../query/Chunk.model');
 const { s3, BUCKET } = require('../../providers/storage/client');
 const { enqueueDocument } = require('../intake/pipeline');
 const { emitAudit } = require('../../core/audit');
+const { removeDocument } = require('./removeDocument');
 
 // In-memory upload; the buffer goes straight to S3 (no local disk needed).
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -16,7 +18,12 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 // Files
 // ===========================================================================
 // Upload -> store in S3 -> respond immediately -> parse with Textract in background
-router.post('/api/files', upload.array('files', 20), async (req, res) => {
+// Legacy (pre-P02) form upload. New clients use /api/uploads (direct-to-S3).
+const legacyGuard = (req, res, next) =>
+  config.upload.legacyRoute
+    ? next()
+    : res.status(410).json({ message: 'This upload method is disabled. Use /api/uploads.' });
+router.post('/api/files', legacyGuard, upload.array('files', 20), async (req, res) => {
   try {
     const { userId } = req.body;
     const uploaded = req.files || [];
@@ -209,14 +216,7 @@ router.delete('/api/files/:id', async (req, res) => {
   try {
     const file = await File.findById(req.params.id);
     if (file) {
-      try {
-        await s3.deleteObject({ Bucket: BUCKET, Key: file.s3Key }).promise();
-      } catch (e) {
-        console.error('s3 delete failed:', e && e.message);
-      }
-      await TableResult.deleteMany({ fileId: file._id });
-      await Chunk.deleteMany({ fileId: file._id });
-      await File.findByIdAndDelete(file._id);
+      await removeDocument(file);
       await emitAudit({
         userId: req.query.userId || file.userId,
         action: 'document.deleted',

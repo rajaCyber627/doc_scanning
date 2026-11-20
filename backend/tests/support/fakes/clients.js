@@ -2,24 +2,51 @@
 const { Readable } = require('stream');
 
 const objects = new Map();
+const multiparts = new Map(); // uploadId → { Key, parts: Map(partNumber → Buffer) }
+
+const noSuchKey = () => {
+  const e = new Error('The specified key does not exist.');
+  e.code = 'NoSuchKey';
+  e.statusCode = 404;
+  return e;
+};
+
+async function toBuffer(body) {
+  if (Buffer.isBuffer(body) || typeof body === 'string') return Buffer.from(body);
+  const chunks = [];
+  for await (const c of body) chunks.push(Buffer.from(c));
+  return Buffer.concat(chunks);
+}
 
 const s3 = {
   upload: ({ Key, Body }) => ({
     promise: async () => {
-      objects.set(Key, Buffer.from(Body));
+      objects.set(Key, await toBuffer(Body));
       return { Key };
     },
   }),
-  getObject: ({ Key }) => ({
+  getObject: ({ Key, Range }) => ({
     promise: async () => {
-      if (!objects.has(Key)) {
-        const e = new Error('The specified key does not exist.');
-        e.code = 'NoSuchKey';
-        throw e;
+      if (!objects.has(Key)) throw noSuchKey();
+      const buf = objects.get(Key);
+      if (Range) {
+        const [, a, b] = /bytes=(\d+)-(\d+)/.exec(Range);
+        return { Body: buf.subarray(Number(a), Number(b) + 1) };
       }
-      return { Body: objects.get(Key) };
+      return { Body: buf };
     },
     createReadStream: () => Readable.from([objects.get(Key) || Buffer.alloc(0)]),
+  }),
+  headObject: ({ Key }) => ({
+    promise: async () => {
+      if (!objects.has(Key)) {
+        const e = new Error('Not Found');
+        e.code = 'NotFound';
+        e.statusCode = 404;
+        throw e;
+      }
+      return { ContentLength: objects.get(Key).length, ContentType: 'application/octet-stream' };
+    },
   }),
   deleteObject: ({ Key }) => ({
     promise: async () => {
@@ -27,8 +54,48 @@ const s3 = {
       return {};
     },
   }),
-  getSignedUrl: (op, { Key }) => `https://fake-s3.local/${Key}`,
+  createMultipartUpload: ({ Key }) => ({
+    promise: async () => {
+      const UploadId = `mp-${multiparts.size + 1}-${Date.now()}`;
+      multiparts.set(UploadId, { Key, parts: new Map() });
+      return { UploadId };
+    },
+  }),
+  completeMultipartUpload: ({ Key, UploadId, MultipartUpload }) => ({
+    promise: async () => {
+      const mp = multiparts.get(UploadId);
+      if (!mp || mp.Key !== Key) throw noSuchKey();
+      const bufs = MultipartUpload.Parts.map((p) => {
+        const b = mp.parts.get(p.PartNumber);
+        if (!b || p.ETag !== `"etag-${p.PartNumber}"`) {
+          const e = new Error('One or more of the specified parts could not be found.');
+          e.code = 'InvalidPart';
+          throw e;
+        }
+        return b;
+      });
+      objects.set(Key, Buffer.concat(bufs));
+      multiparts.delete(UploadId);
+      return {};
+    },
+  }),
+  abortMultipartUpload: ({ UploadId }) => ({
+    promise: async () => {
+      multiparts.delete(UploadId);
+      return {};
+    },
+  }),
+  getSignedUrl: (op, p) =>
+    op === 'uploadPart'
+      ? `https://fake-s3.local/${p.Key}?uploadId=${p.UploadId}&partNumber=${p.PartNumber}`
+      : `https://fake-s3.local/${p.Key}?op=${op}`,
 };
+
+/** Simulate the browser PUTting one part to its presigned URL; returns its ETag. */
+function putPart(uploadId, partNumber, buf) {
+  multiparts.get(uploadId).parts.set(partNumber, Buffer.from(buf));
+  return `"etag-${partNumber}"`;
+}
 
 // Textract behaves like the dev account today: not activated.
 const subscriptionError = () => {
@@ -63,7 +130,18 @@ const anthropic = {
 
 function reset() {
   objects.clear();
+  multiparts.clear();
   replies.length = 0;
 }
 
-module.exports = { s3, textract, anthropic, BUCKET: 'test-bucket', __objects: objects, __replies: replies, __reset: reset };
+module.exports = {
+  s3,
+  textract,
+  anthropic,
+  BUCKET: 'test-bucket',
+  __objects: objects,
+  __multiparts: multiparts,
+  __putPart: putPart,
+  __replies: replies,
+  __reset: reset,
+};

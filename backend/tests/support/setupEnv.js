@@ -17,5 +17,10 @@ Object.assign(process.env, {
   PIPELINE_BACKOFF_MS: '0',
   PIPELINE_MAX_ATTEMPTS: '4',
   PARTNER_ADAPTER: 'mock',
+  UPLOAD_MULTIPART_MB: '1', // small so multipart can be tested with small buffers
+  UPLOAD_PART_MB: '1',
+  UPLOAD_MAX_MB: '100',
+  UPLOAD_TRANSPORT: 'auto',
+  TEXT_MAX_STORED_CHARS: '50000', // small so the "very long text" path is testable
   AWS_SDK_JS_SUPPRESS_MAINTENANCE_MODE_MESSAGE: '1',
 });

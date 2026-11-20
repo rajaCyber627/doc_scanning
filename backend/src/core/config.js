@@ -38,4 +38,24 @@ module.exports = {
   partner: {
     adapter: env.PARTNER_ADAPTER || 'mock',
   },
+
+  text: {
+    // MongoDB documents max out at 16 MB. Longer extracted text is stored in full in
+    // S3 (File.textS3Key) and a capped copy is kept on the File for search / Q&A.
+    maxStoredChars: int(env.TEXT_MAX_STORED_CHARS, 1000000),
+  },
+
+  upload: {
+    maxBytes: int(env.UPLOAD_MAX_MB, 100) * 1024 * 1024,
+    // Files above this go to S3 as multipart (parallel parts, resumable per part).
+    multipartThresholdBytes: int(env.UPLOAD_MULTIPART_MB, 10) * 1024 * 1024,
+    partSizeBytes: int(env.UPLOAD_PART_MB, 8) * 1024 * 1024, // S3 minimum is 5 MB
+    // 'auto' = browser tries direct-to-S3 and falls back to the server if the bucket
+    // blocks the browser (CORS); 'direct' or 'proxy' force one transport.
+    transport: ['auto', 'direct', 'proxy'].includes(env.UPLOAD_TRANSPORT) ? env.UPLOAD_TRANSPORT : 'auto',
+    presignExpiresSec: int(env.UPLOAD_PRESIGN_SECONDS, 3600),
+    sessionTtlHours: int(env.UPLOAD_SESSION_TTL_HOURS, 24),
+    // The pre-P02 multipart form route (POST /api/files) stays available unless disabled.
+    legacyRoute: env.UPLOAD_LEGACY_ROUTE !== 'false',
+  },
 };

@@ -123,6 +123,27 @@ describe('failures', () => {
   });
 });
 
+describe('very long documents', () => {
+  test('text over the storage cap is kept in full in S3 and capped on the record; delete removes both', async () => {
+    const long = 'Employee: John Smith. '.repeat(6000); // 132k chars > 50k test cap
+    const res = await request(app)
+      .post('/api/files')
+      .field('userId', String(user._id))
+      .attach('files', Buffer.from(long), { filename: 'long.txt', contentType: 'text/plain' });
+    await onIdle();
+    const f = await File.findById(res.body.files[0].fileId);
+    expect(f.status).toBe('ready');
+    expect(f.textTruncated).toBe(true);
+    expect(f.textLength).toBe(long.length);
+    expect(f.rawText).toHaveLength(50000);
+    expect(fakes.__objects.get(f.textS3Key).toString()).toBe(long);
+
+    await request(app).delete(`/api/files/${f._id}`);
+    expect(fakes.__objects.has(f.textS3Key)).toBe(false);
+    expect(fakes.__objects.has(f.s3Key)).toBe(false);
+  });
+});
+
 describe('restart recovery', () => {
   test('documents left in "processing" are resumed on start-up', async () => {
     fakes.__objects.set('stuck-key', fs.readFileSync(fixture('evaluation.txt')));

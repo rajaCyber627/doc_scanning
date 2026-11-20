@@ -197,9 +197,8 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
 
 - ~~Login without username matched the first user~~ — **fixed in P01** (400 when missing);
   the same pattern in sign-up (missing userName collided with every user) also fixed.
-- **Opaque failures:** failed uploads show only "Failed"
-  (`client/src/pages/Documents.tsx:244`) although a readable error is now stored on the
-  File (`error`, `errorCode`). Show it in the UI in P02.
+- ~~Opaque failures~~ — **fixed in P02**: `DocumentStatus` shows the stage, the readable
+  reason and a Retry button.
 - **No real authorization yet:** routes trust `userId` from the request, and
   `GET /api/files`, `/api/tables`, `/api/folders`, `/api/prompts` return **all users' data
   when `userId` is omitted**. Addressed with Entra ID SSO + roles (supporting work, not P01).
@@ -229,7 +228,11 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
 
 - [x] P00 Shared context file
 - [x] P01 Pipeline foundation & test harness (29 tests passing; live end-to-end run unchanged)
-- [ ] P02 Individual upload (direct-to-S3)
+- [x] P02 Individual upload (direct-to-S3) — `features/upload` (sessions, presigned single +
+  multipart, server proxy fallback, content sniffing, abort), `features/intake/routes` (retry),
+  client `features/upload` (queue, tray, progress) + `features/intake/DocumentStatus`;
+  long text capped on the record with full text in S3. See `docs/capture/uploads.md`.
+  Bucket CORS for browser uploads is NOT set yet (client falls back to proxy).
 - [ ] P03 Bulk upload & batches
 - [ ] P04 Drag-and-drop
 - [ ] P05 Electronic document import

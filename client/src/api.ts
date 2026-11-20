@@ -38,6 +38,9 @@ export interface FileItem {
   status: FileStatus;
   mimeType?: string;
   error?: string;
+  errorCode?: string;
+  stage?: string | null; // current pipeline stage while processing
+  sizeBytes?: number | null;
   createdAt: string;
   summary?: string;
   keyFacts?: { label: string; value: any }[];

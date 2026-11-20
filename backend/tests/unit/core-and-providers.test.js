@@ -42,6 +42,11 @@ describe('humanizeError', () => {
     expect(humanizeError(new Error('weird thing'))).toMatchObject({ code: 'PROCESSING_ERROR', message: 'weird thing', retryable: true });
   });
 
+  test('a record over the MongoDB size limit is reported clearly and not retried', () => {
+    const e = new RangeError('The value of "offset" is out of range. It must be >= 0 && <= 17825792. Received 17825795');
+    expect(humanizeError(e)).toMatchObject({ code: 'DOCUMENT_TOO_LARGE', retryable: false });
+  });
+
   test('missing file and access denied are not retried', () => {
     expect(humanizeError({ code: 'NoSuchKey', message: 'x' })).toMatchObject({ code: 'FILE_MISSING', retryable: false });
     expect(humanizeError({ code: 'AccessDenied', message: 'x' })).toMatchObject({ code: 'ACCESS_DENIED', retryable: false });

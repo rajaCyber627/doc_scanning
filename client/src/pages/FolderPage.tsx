@@ -7,18 +7,20 @@ import Chatbot from "../components/Chatbot";
 import ResultView from "../components/ResultView";
 import LoadingMessages from "../components/LoadingMessages";
 import { getUser } from "../auth";
+import { useUploads } from "../features/upload/useUploads";
+import UploadTray from "../features/upload/UploadTray";
+import { getUploadConfig } from "../features/upload/uploadApi";
+import DocumentStatus from "../features/intake/DocumentStatus";
 import {
   getFolder,
   deleteFolder,
   deleteTable,
-  uploadOne,
   FolderItem,
   FileItem,
   SavedTableItem,
 } from "../api";
 
 type Tab = "chat" | "tables" | "files";
-const MAX_MB = 4.5;
 
 export default function FolderPage() {
   const { id } = useParams();
@@ -33,7 +35,7 @@ export default function FolderPage() {
   const [modal, setModal] = useState<SavedTableItem | null>(null);
   const user = getUser()!;
   const addRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState("");
+  const [accept, setAccept] = useState<string | undefined>(undefined);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -51,26 +53,17 @@ export default function FolderPage() {
     return () => clearInterval(t);
   }, [state, load]);
 
-  const onAddPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(e.target.files || []).filter((f) => {
-      if (f.size > MAX_MB * 1024 * 1024) {
-        message.error(`"${f.name}" is over ${MAX_MB} MB — skipped`);
-        return false;
-      }
-      return true;
-    });
+  useEffect(() => {
+    getUploadConfig().then((c) => setAccept(c.accept)).catch(() => {});
+  }, []);
+  const uploads = useUploads(user._id, () => {
+    load();
+  });
+  const onAddPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
     e.target.value = "";
     if (!picked.length || !id) return;
-    setUploading(`Uploading ${picked.length}…`);
-    try {
-      for (const f of picked) await uploadOne(f, user._id, id);
-      message.success("Added — parsing…");
-      load();
-    } catch {
-      message.error("Upload failed");
-    } finally {
-      setUploading("");
-    }
+    uploads.enqueue(picked, id);
   };
 
   if (loading || !state)
@@ -115,9 +108,9 @@ export default function FolderPage() {
           📁 {folder.name}
         </h2>
         <span className="label">{files.length} files</span>
-        <input ref={addRef} type="file" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.docx,.txt,.md,.csv" onChange={onAddPicked} />
-        <button className="btn btn-sm btn-primary" style={{ marginLeft: "auto" }} onClick={() => addRef.current?.click()} disabled={!!uploading}>
-          {uploading || "＋ Add files"}
+        <input ref={addRef} type="file" multiple hidden accept={accept} onChange={onAddPicked} />
+        <button className="btn btn-sm btn-primary" style={{ marginLeft: "auto" }} onClick={() => addRef.current?.click()}>
+          {uploads.busy ? "＋ Add more" : "＋ Add files"}
         </button>
         <button className="btn btn-sm btn-danger" onClick={removeFolder}>
           Delete set
@@ -197,13 +190,19 @@ export default function FolderPage() {
                   {dayjs(f.createdAt).format("MMM D, YYYY")}
                 </div>
               </div>
-              <span className={"badge " + (f.status === "ready" ? "ready" : f.status === "failed" ? "failed" : "processing")}>
-                <span className="dot" /> {f.status}
-              </span>
+              <DocumentStatus doc={f} userId={user._id} onRetried={() => load()} />
             </div>
           ))}
         </div>
       )}
+
+      <UploadTray
+        items={uploads.items}
+        onCancel={uploads.cancel}
+        onRetry={uploads.retry}
+        onDismiss={uploads.dismiss}
+        onClear={uploads.clearFinished}
+      />
 
       {modal && (
         <div

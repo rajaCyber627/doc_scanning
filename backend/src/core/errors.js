@@ -33,6 +33,13 @@ const RULES = [
     retryable: false,
   },
   {
+    test: (e) =>
+      /BSONObjectTooLarge|document is larger than the maximum size|"offset" is out of range/i.test(e.message),
+    code: 'DOCUMENT_TOO_LARGE',
+    message: 'This document produced more data than can be stored in one record. Split it into smaller files and upload again.',
+    retryable: false,
+  },
+  {
     test: (e) => e.code === 'ThrottlingException' || e.code === 'ProvisionedThroughputExceededException' || e.status === 429,
     code: 'RATE_LIMITED',
     message: 'A cloud service is busy (rate limited). The document will be retried automatically.',

@@ -7,10 +7,13 @@ import AppShell from "../components/AppShell";
 import Chatbot from "../components/Chatbot";
 import LoadingMessages from "../components/LoadingMessages";
 import { getUser } from "../auth";
+import { useUploads } from "../features/upload/useUploads";
+import UploadTray from "../features/upload/UploadTray";
+import { getUploadConfig, UploadConfig } from "../features/upload/uploadApi";
+import DocumentStatus from "../features/intake/DocumentStatus";
 import {
   listFiles,
   listFolders,
-  uploadOne,
   createFolder,
   deleteFile,
   deleteFolder,
@@ -20,15 +23,13 @@ import {
   ContentHit,
 } from "../api";
 
-const MAX_MB = 4.5;
-
 export default function Documents() {
   const user = getUser()!;
   const nav = useNavigate();
   const [sp, setSp] = useSearchParams();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
-  const [uploading, setUploading] = useState("");
+  const [uploadCfg, setUploadCfg] = useState<UploadConfig | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState<{ ids: string[]; label: string; folderId?: string } | null>(null);
@@ -53,6 +54,11 @@ export default function Documents() {
     load();
   }, [load]);
   useEffect(() => {
+    getUploadConfig().then(setUploadCfg).catch(() => {});
+  }, []);
+  const uploads = useUploads(user._id, load);
+  const maxMB = uploadCfg ? Math.round(uploadCfg.maxBytes / 1048576) : 100;
+  useEffect(() => {
     if (!files.some((f) => f.status === "processing")) return;
     const t = setInterval(load, 3000);
     return () => clearInterval(t);
@@ -72,41 +78,20 @@ export default function Documents() {
     return () => clearTimeout(t);
   }, [mode, q, user._id]);
 
-  const sizeOk = (f: File) => {
-    if (f.size > MAX_MB * 1024 * 1024) {
-      message.error(`"${f.name}" is over ${MAX_MB} MB — skipped`);
-      return false;
-    }
-    return true;
-  };
-
-  // Upload a batch straight into folderId (or the user's root when omitted).
+  // Upload into folderId (or the user's root when omitted). Size/type checks and
+  // per-file progress are handled by the upload queue (features/upload).
   const pushFiles = useCallback(
-    async (list: File[], folderId?: string) => {
-      if (!list.length) return;
-      try {
-        for (let i = 0; i < list.length; i++) {
-          setUploading(`Uploading ${i + 1} of ${list.length}…`);
-          await uploadOne(list[i], user._id, folderId);
-        }
-        message.success("Uploaded — parsing your documents…");
-        load();
-      } catch {
-        message.error("Upload failed");
-      } finally {
-        setUploading("");
-      }
-    },
-    [user._id, load]
+    (list: File[], folderId?: string) => uploads.enqueue(list, folderId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [uploads.enqueue]
   );
 
   // Main dropzone / Upload button: one file → root; several → ask whether to
   // make a set or drop them all at root.
   const beginUpload = (list: File[]) => {
-    const valid = list.filter(sizeOk);
-    if (!valid.length) return;
-    if (valid.length > 1) setPending(valid);
-    else pushFiles(valid);
+    if (!list.length) return;
+    if (list.length > 1) setPending(list);
+    else pushFiles(list);
   };
   const createSet = async () => {
     const files = pending || [];
@@ -135,7 +120,7 @@ export default function Documents() {
     addRef.current?.click();
   };
   const onAddPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter(sizeOk);
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
     if (files.length && pendingFolder.current) pushFiles(files, pendingFolder.current);
   };
@@ -143,15 +128,6 @@ export default function Documents() {
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     onDrop: (a) => a.length > 0 && beginUpload(a),
     noClick: true,
-    accept: {
-      "application/pdf": [".pdf"],
-      "image/png": [".png"],
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/tiff": [".tif", ".tiff"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-      "text/plain": [".txt", ".md"],
-      "text/csv": [".csv"],
-    },
   });
 
   // group + filter
@@ -237,17 +213,7 @@ export default function Documents() {
           {dayjs(f.createdAt).format("MMM D, YYYY")}
         </span>
       </span>
-      {f.status === "processing" ? (
-        <LoadingMessages compact />
-      ) : f.status === "failed" ? (
-        <span className="badge failed" title={f.error}>
-          <span className="dot" /> Failed
-        </span>
-      ) : (
-        <span className="badge ready">
-          <span className="dot" /> Ready
-        </span>
-      )}
+      <DocumentStatus doc={f} userId={user._id} onRetried={load} />
       <button className="btn btn-sm btn-danger" onClick={(e) => removeFile(e, f)} title="Delete">
         ✕
       </button>
@@ -261,7 +227,7 @@ export default function Documents() {
         type="file"
         multiple
         hidden
-        accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.docx,.txt,.md,.csv"
+        accept={uploadCfg?.accept}
         onChange={onAddPicked}
       />
       <div {...getRootProps()} style={{ outline: isDragActive ? "2px dashed var(--accent)" : "none", outlineOffset: 6, borderRadius: 6 }}>
@@ -270,11 +236,11 @@ export default function Documents() {
           <div>
             <h1 style={{ margin: 0 }}>Documents</h1>
             <span className="faint" style={{ fontSize: 13 }}>
-              Drop files anywhere · one file → root · multiple → a new set · up to {MAX_MB} MB each
+              Drop files anywhere · one file → root · multiple → a new set · up to {maxMB} MB each
             </span>
           </div>
-          <button className="btn btn-primary" onClick={open} disabled={!!uploading}>
-            {uploading || "＋ Upload files"}
+          <button className="btn btn-primary" onClick={open}>
+            {uploads.busy ? "＋ Upload more" : "＋ Upload files"}
           </button>
         </div>
 
@@ -406,6 +372,14 @@ export default function Documents() {
           </div>
         )}
       </div>
+
+      <UploadTray
+        items={uploads.items}
+        onCancel={uploads.cancel}
+        onRetry={uploads.retry}
+        onDismiss={uploads.dismiss}
+        onClear={uploads.clearFinished}
+      />
 
       {pending && (
         <div

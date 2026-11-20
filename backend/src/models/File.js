@@ -23,6 +23,10 @@ const fileSchema = new mongoose.Schema(
     error: { type: String, default: '' },
 
     // ----- Capture Hub fields (all optional; existing documents keep working) -----
+    // Full extracted text lives in S3 when it exceeds config.text.maxStoredChars
+    textLength: { type: Number, default: null },
+    textTruncated: { type: Boolean, default: false },
+    textS3Key: { type: String, default: null },
     sha256: { type: String, default: null, index: true },
     sizeBytes: { type: Number, default: null },
     pageCount: { type: Number, default: null },

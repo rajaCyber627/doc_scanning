@@ -6,6 +6,7 @@ const TableResult = require('../tables/TableResult.model');
 const Chunk = require('../query/Chunk.model');
 const { s3, BUCKET } = require('../../providers/storage/client');
 const { emitAudit } = require('../../core/audit');
+const { removeDocument } = require('../documents/removeDocument');
 
 // Create an (empty) folder to upload a set into
 router.post('/api/folders', async (req, res) => {
@@ -56,14 +57,7 @@ router.delete('/api/folders/:id', async (req, res) => {
   try {
     const files = await File.find({ folderId: req.params.id });
     for (const file of files) {
-      try {
-        await s3.deleteObject({ Bucket: BUCKET, Key: file.s3Key }).promise();
-      } catch (e) {
-        console.error('s3 delete failed:', e && e.message);
-      }
-      await TableResult.deleteMany({ fileId: file._id });
-      await Chunk.deleteMany({ fileId: file._id });
-      await File.findByIdAndDelete(file._id);
+      await removeDocument(file);
       await emitAudit({
         userId: req.query.userId || file.userId,
         action: 'document.deleted',
