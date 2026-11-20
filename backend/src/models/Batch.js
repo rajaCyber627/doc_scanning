@@ -41,6 +41,7 @@ const batchSchema = new mongoose.Schema(
       uploadFailed: { type: Number, default: 0 },
       notUploaded: { type: Number, default: 0 },
       cancelled: { type: Number, default: 0 },
+      duplicates: { type: Number, default: 0 },
     },
   },
   { timestamps: true }

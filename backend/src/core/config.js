@@ -67,6 +67,13 @@ module.exports = {
     skewDegrees: Number(env.OCR_SKEW_DEGREES || 3), // tilt worth flagging / straightening
   },
 
+  duplicates: {
+    // Estimated text similarity (0–1) at which two documents count as the same content
+    contentSimilarity: Number(env.DUPLICATE_CONTENT_SIMILARITY || 0.75),
+    // …and the numbers in both (IDs, dates, amounts) must mostly agree (0–1)
+    numberAgreement: Number(env.DUPLICATE_NUMBER_AGREEMENT || 0.8),
+  },
+
   search: {
     provider: ['mongo', 'atlas'].includes(env.SEARCH_PROVIDER) ? env.SEARCH_PROVIDER : 'mongo',
   },

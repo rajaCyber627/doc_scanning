@@ -10,6 +10,7 @@ import PdfViewer from "../components/PdfViewer";
 import ImageViewer from "../components/ImageViewer";
 import RelatedDocuments from "../features/documents/RelatedDocuments";
 import OcrPanel from "../features/ocr/OcrPanel";
+import DuplicatePanel from "../features/duplicates/DuplicatePanel";
 import { getUser } from "../auth";
 import {
   getFile,
@@ -503,6 +504,7 @@ export default function FilePage() {
 
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
+          {(file.duplicateOf?.length ?? 0) > 0 && <DuplicatePanel fileId={file._id} userId={user._id} onChanged={load} />}
           <OcrPanel file={file} userId={user._id} onChanged={load} />
           <RelatedDocuments detail={state} />
           <div className="card" style={{ marginBottom: 16 }}>

@@ -68,7 +68,8 @@ async function textWithPages(file) {
 
 async function indexDocument(fileId) {
   const file = await File.findById(fileId).lean();
-  if (!file || !SEARCHABLE.includes(file.status)) {
+  // superseded versions leave search; the current version replaces them
+  if (!file || !SEARCHABLE.includes(file.status) || file.supersededBy) {
     await SearchDoc.deleteOne({ fileId });
     return null;
   }
@@ -121,6 +122,7 @@ function buildPayload(file, sd) {
     folderId: file.folderId ? String(file.folderId) : null,
     batchId: file.batchId ? String(file.batchId) : null,
     parentDocumentId: file.parentDocumentId ? String(file.parentDocumentId) : null,
+    supersedesDocumentId: file.supersedes ? String(file.supersedes) : null,
     confidentiality: file.confidentiality || null,
     metadata: file.metadata || {},
     files: {
@@ -147,7 +149,7 @@ function buildPayload(file, sd) {
 
 async function syncToPartner(fileId) {
   const file = await File.findById(fileId).lean();
-  if (!file || file.status !== 'ready') return null; // processing / failed / waiting for review
+  if (!file || file.status !== 'ready' || file.supersededBy) return null; // not ready, or an old version
   const sd = await SearchDoc.findOne({ fileId: file._id }).lean();
   const payload = buildPayload(file, sd);
   const { partnerDocumentId } = await getPartner().pushDocument(file, payload);

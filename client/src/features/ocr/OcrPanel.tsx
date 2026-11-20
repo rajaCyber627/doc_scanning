@@ -7,7 +7,7 @@ import { errorMessage } from "../upload/uploadApi";
 /** Sidebar card: what OCR found (quality, form fields) and the review action. */
 export default function OcrPanel({ file, userId, onChanged }: { file: FileItem; userId: string; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
-  const reasons = file.reviewReasons || [];
+  const reasons = (file.reviewReasons || []).filter((r) => r.stage !== "duplicates");
   const ocr = file.ocr;
   if (!ocr && !reasons.length) return null;
 
@@ -28,7 +28,7 @@ export default function OcrPanel({ file, userId, onChanged }: { file: FileItem; 
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">Text recognition</div>
       <div style={{ padding: 14, display: "grid", gap: 10, fontSize: 13 }}>
-        {file.status === "needs_review" && reasons.length > 0 && (
+        {file.status === "needs_review" && reasons.length > 0 && !(file.reviewReasons || []).some((r) => r.stage === "duplicates") && (
           <div className="review-box" role="status">
             <strong>Needs review</strong>
             <ul>

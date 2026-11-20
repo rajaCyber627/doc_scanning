@@ -264,7 +264,13 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   `User.permissions` contains "restricted"). Partner payload schema:
   `docs/capture/partner-payload.schema.json` (validated in tests with ajv). Handoff only when status
   is ready. `scripts/reindex-search.js`. See `docs/capture/search.md`.
-- [ ] P08 Duplicate detection
+- [x] P08 Duplicate detection — `features/duplicates` (fingerprint: contentHash, 64-value MinHash +
+  16 LSH bands, numberTokens guard for templated HR forms; service: checkDuplicates in new blocking
+  `dedupe` stage, earlier doc = original, partner findByHash, restricted-safe messages; decisions
+  keep_both / replace (supersededBy/supersedes, hidden from lists+search, payload
+  supersedesDocumentId) / discard; batch bulk decision). Review endpoint refuses while a duplicate
+  decision is open. `GET /api/files/:id/preview`. Client DuplicatePanel (+ compare modal), batch
+  bulk actions. See `docs/capture/duplicates.md`.
 - [ ] P09 Metadata entry
 - [ ] P10 Automated / assisted classification
 - [ ] P11 Document splitting

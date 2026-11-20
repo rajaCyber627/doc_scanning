@@ -80,7 +80,7 @@ async function createBatch({ userId, name, folderId, source, items }) {
 async function itemStates(batch) {
   const [docs, sessions] = await Promise.all([
     File.find({ batchId: batch._id })
-      .select('fileName status stage error errorCode sizeBytes batchItem createdAt')
+      .select('fileName status stage error errorCode sizeBytes batchItem createdAt reviewReasons')
       .sort({ createdAt: 1 })
       .lean(),
     UploadSession.find({ batchId: batch._id }).select('status error hints createdAt').sort({ createdAt: 1 }).lean(),
@@ -115,6 +115,8 @@ async function itemStates(batch) {
       error: (doc && doc.error) || (sess && sess.status === 'failed' ? sess.error : '') || '',
       documentId: doc ? String(doc._id) : null,
       uploadedAt: doc ? doc.createdAt : null,
+      reviewReasons: doc ? (doc.reviewReasons || []).map((r) => r.message) : [],
+      duplicate: !!(doc && (doc.reviewReasons || []).some((r) => r.stage === 'duplicates')),
     };
   });
   for (const d of extraDocs) {
@@ -128,6 +130,8 @@ async function itemStates(batch) {
       error: d.error || '',
       documentId: String(d._id),
       uploadedAt: d.createdAt,
+      reviewReasons: (d.reviewReasons || []).map((r) => r.message),
+      duplicate: (d.reviewReasons || []).some((r) => r.stage === 'duplicates'),
     });
   }
   return rows;
@@ -145,8 +149,10 @@ function countRows(rows) {
     uploadFailed: 0,
     notUploaded: 0,
     cancelled: 0,
+    duplicates: 0,
   };
   for (const r of rows) {
+    if (r.duplicate) c.duplicates++;
     if (r.state === 'cancelled') {
       c.cancelled++;
       continue;

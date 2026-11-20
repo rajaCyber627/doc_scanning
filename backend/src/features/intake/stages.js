@@ -12,6 +12,7 @@ const { createChildren } = require('../documents/children');
 const { buildRendition } = require('../documents/rendition');
 const OcrPage = require('../ocr/OcrPage.model');
 const { indexDocument, syncToPartner } = require('../search/indexer');
+const { checkDuplicates } = require('../duplicates/service');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -77,6 +78,14 @@ const STAGES = [
         // OCR quality problems replace earlier OCR reasons; other stages' reasons stay
         reviewReasons: [...(f.reviewReasons || []).filter((r) => r.stage !== 'ocr'), ...(extracted.reviewReasons || [])],
       };
+    },
+  },
+  {
+    name: 'dedupe',
+    blocking: true,
+    // Same file / same content already captured (hub or partner)? → needs review.
+    async run(ctx) {
+      return checkDuplicates(ctx.file);
     },
   },
   {

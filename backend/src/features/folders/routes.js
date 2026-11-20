@@ -41,7 +41,7 @@ router.get('/api/folders/:id', async (req, res) => {
   try {
     const folder = await Folder.findById(req.params.id);
     if (!folder) return res.status(404).json({ message: 'Folder not found' });
-    const files = await File.find({ folderId: folder._id })
+    const files = await File.find({ folderId: folder._id, supersededBy: null })
       .select('-rawText -tablesCsv -words')
       .sort({ createdAt: -1 });
     const tables = await TableResult.find({ folderId: folder._id }).sort({ createdAt: -1 });

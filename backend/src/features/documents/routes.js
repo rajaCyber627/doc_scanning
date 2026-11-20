@@ -83,7 +83,10 @@ router.post('/api/files', legacyGuard, upload.array('files', 20), async (req, re
 router.get('/api/files', async (req, res) => {
   try {
     const { userId } = req.query;
-    const files = await File.find(userId ? { userId } : {})
+    // Superseded versions (replaced duplicates) are hidden unless asked for.
+    const q = userId ? { userId } : {};
+    if (req.query.includeSuperseded !== '1') q.supersededBy = null;
+    const files = await File.find(q)
       .select('-rawText -tablesCsv -words')
       .sort({ createdAt: -1 });
     res.json(files);
@@ -211,6 +214,30 @@ router.get('/api/files/:id/geometry', async (req, res) => {
 
 // Stream the raw file bytes same-origin (so pdf.js can fetch a PDF without
 // hitting S3 CORS). Used by the in-page PDF viewer.
+// Best available preview of any document: its PDF view, a converted image, or the
+// original when browsers can show it (PDF / PNG / JPEG). Used by the compare view.
+router.get('/api/files/:id/preview', async (req, res) => {
+  try {
+    const file = await File.findById(req.params.id).select('s3Key mimeType fileName renditionS3Key ocrSourceS3Key');
+    if (!file) return res.status(404).json({ message: 'File not found' });
+    let key = null;
+    let type = null;
+    if (file.renditionS3Key) [key, type] = [file.renditionS3Key, 'application/pdf'];
+    else if (file.ocrSourceS3Key) [key, type] = [file.ocrSourceS3Key, 'image/jpeg'];
+    else if (/^(application\/pdf|image\/(png|jpeg))$/.test(file.mimeType || '')) [key, type] = [file.s3Key, file.mimeType];
+    if (!key) return res.status(404).json({ message: 'No preview for this document' });
+    res.setHeader('Content-Type', type);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    const stream = s3.getObject({ Bucket: BUCKET, Key: key }).createReadStream();
+    stream.on('error', () => !res.headersSent && res.status(500).end());
+    stream.pipe(res);
+  } catch (err) {
+    console.error('preview error:', err && err.message);
+    res.status(500).json({ message: 'Could not load the preview' });
+  }
+});
+
 // The PDF view (rendition) of a non-PDF document, streamed same-origin for pdf.js.
 router.get('/api/files/:id/rendition', async (req, res) => {
   try {

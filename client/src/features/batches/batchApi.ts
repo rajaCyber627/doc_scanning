@@ -21,6 +21,7 @@ export interface BatchCounts {
   uploadFailed: number;
   notUploaded: number;
   cancelled: number;
+  duplicates?: number;
 }
 
 export interface BatchSummary {
@@ -67,6 +68,9 @@ export const retryFailedInBatch = (id: string, userId: string) =>
 
 export const cancelUnfinished = (id: string, userId: string, indexes?: number[]) =>
   axios.post(`/api/batches/${id}/cancel-unfinished`, { userId, indexes }).then((r) => r.data as { cancelled: number });
+
+export const decideBatchDuplicates = (id: string, userId: string, action: "keep_both" | "discard", reason: string) =>
+  axios.post(`/api/batches/${id}/duplicate-decision`, { userId, action, reason }).then((r) => r.data as { decided: number; errors: unknown[] });
 
 /** Download the batch CSV report (fetched via the API so it works behind any proxy). */
 export async function downloadBatchReport(id: string, userId: string, fallbackName = "batch-report.csv") {

@@ -51,6 +51,17 @@ const fileSchema = new mongoose.Schema(
     textTruncated: { type: Boolean, default: false },
     textS3Key: { type: String, default: null },
     sha256: { type: String, default: null, index: true },
+    // Duplicate detection (P08): text fingerprints, what this duplicates, the decision
+    contentHash: { type: String, default: null, index: true },
+    minhash: { type: [Number], default: [] },
+    lshBands: { type: [String], default: [], index: true },
+    numberTokens: { type: [String], default: [] },
+    duplicateOf: { type: Array, default: [] }, // [{ kind, where, fileId?, similarity, restricted, sameBatch }]
+    duplicateDecision: { type: mongoose.Schema.Types.Mixed, default: null }, // { action, reason, by, at }
+    // Versions: "Replace existing" keeps the old document, marked as superseded
+    supersededBy: { type: mongoose.Schema.Types.ObjectId, ref: 'File', default: null, index: true },
+    supersededAt: { type: Date, default: null },
+    supersedes: { type: mongoose.Schema.Types.ObjectId, ref: 'File', default: null },
     sizeBytes: { type: Number, default: null },
     pageCount: { type: Number, default: null },
     source: {

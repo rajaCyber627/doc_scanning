@@ -208,12 +208,13 @@ describe('report, listing and access', () => {
   });
 
   test('a 500-file batch is accepted and tracked', async () => {
-    const items = Array.from({ length: 500 }, (_, i) => ({ name: `doc-${i}.txt`, size: 5 }));
+    const body = (i) => `hello ${String(i).padStart(3, '0')}`; // unique content per file
+    const items = Array.from({ length: 500 }, (_, i) => ({ name: `doc-${i}.txt`, size: body(i).length }));
     const b = (await request(app).post('/api/batches').send({ userId: uid(), items })).body;
     expect(b.itemCount).toBe(500);
-    for (let i = 0; i < 25; i++) await uploadItem(b._id, i, `doc-${i}.txt`, 'hello');
+    for (let i = 0; i < 25; i++) await uploadItem(b._id, i, `doc-${i}.txt`, body(i));
     await settle();
     const detail = await request(app).get(`/api/batches/${b._id}?userId=${uid()}`);
-    expect(detail.body.batch.counts).toMatchObject({ total: 500, ready: 25, notUploaded: 475 });
+    expect(detail.body.batch.counts).toMatchObject({ total: 500, ready: 25, notUploaded: 475, duplicates: 0 });
   });
 });

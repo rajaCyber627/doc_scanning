@@ -15,6 +15,7 @@ import {
   retryFailedInBatch,
   cancelUnfinished,
   downloadBatchReport,
+  decideBatchDuplicates,
   BatchSummary,
   BatchItemRow,
 } from "./batchApi";
@@ -168,7 +169,33 @@ export default function BatchPage() {
         {stat("Needs review", c.needsReview, "--attention")}
         {stat("Failed", c.failed + c.uploadFailed, "--danger")}
         {stat("Not uploaded", c.notUploaded)}
+        {(c.duplicates || 0) > 0 && stat("Possible duplicates", c.duplicates || 0, "--attention")}
       </div>
+
+      {(c.duplicates || 0) > 0 && (
+        <div className="card" style={{ padding: 14, margin: "12px 0", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ flex: 1, minWidth: 220 }}>
+            <strong>{c.duplicates} possible duplicate{c.duplicates === 1 ? "" : "s"}</strong> in this batch. Open a file to compare it, or decide for all of them:
+          </span>
+          {(["keep_both", "discard"] as const).map((action) => (
+            <button
+              key={action}
+              className={`btn btn-sm${action === "discard" ? " btn-danger" : ""}`}
+              disabled={!!busy}
+              onClick={() => {
+                const reason = window.prompt(action === "discard" ? "Remove all duplicate copies in this batch? Reason (for the audit trail):" : "Keep all copies? Reason (for the audit trail):");
+                if (reason === null) return;
+                run("dups", async () => {
+                  const r = await decideBatchDuplicates(batch._id, user._id, action, reason);
+                  return `${action === "discard" ? "Removed" : "Kept"} ${r.decided} document${r.decided === 1 ? "" : "s"}`;
+                });
+              }}
+            >
+              {action === "discard" ? "Discard all duplicate copies" : "Keep all"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {unfinished.length > 0 && !uploads.busy && (
         <div className="card" style={{ padding: 14, margin: "12px 0", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>

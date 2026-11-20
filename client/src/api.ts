@@ -46,6 +46,9 @@ export interface FileItem {
   parentDocumentId?: string | null;
   childSummary?: { created: number; skipped: { name: string; reason: string }[] };
   reviewReasons?: { code: string; message: string; stage?: string; page?: number }[];
+  duplicateOf?: { kind: string; where: string }[];
+  supersedes?: string | null;
+  supersededBy?: string | null;
   ocr?: {
     provider: string;
     pages: number;
