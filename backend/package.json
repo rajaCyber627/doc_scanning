@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --runInBand",
-    "start": "node app.js"
+    "start": "node app.js",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest --runInBand tests/integration"
   },
   "keywords": [],
   "author": "",
@@ -32,7 +34,10 @@
   "jest": {
     "testEnvironment": "node",
     "setupFiles": [
-      "<rootDir>/tests/setupEnv.js"
+      "<rootDir>/tests/support/setupEnv.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/support/mockProviders.js"
     ],
     "testMatch": [
       "<rootDir>/tests/**/*.test.js"

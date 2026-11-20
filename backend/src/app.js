@@ -1,10 +1,13 @@
 // Builds the Express app (no DB connection, no listen) so tests can use it directly.
-require('./config');
+require('./core/config');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+
+// Each feature exposes an Express router from features/<name>/routes.js.
+const FEATURES = ['auth', 'prompts', 'documents', 'search', 'tables', 'folders', 'query'];
 
 function createApp() {
   const app = express();
@@ -12,13 +15,7 @@ function createApp() {
   app.use(cors());
   app.use(express.static(PUBLIC_DIR));
 
-  app.use(require('./routes/auth'));
-  app.use(require('./routes/prompts'));
-  app.use(require('./routes/files'));
-  app.use(require('./routes/search'));
-  app.use(require('./routes/tables'));
-  app.use(require('./routes/folders'));
-  app.use(require('./routes/query'));
+  for (const name of FEATURES) app.use(require(`./features/${name}/routes`));
 
   // SPA fallback — serve the built UI for any non-/api route
   app.get(/^\/(?!api).*/, (req, res) => {

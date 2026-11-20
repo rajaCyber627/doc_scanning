@@ -1,9 +1,9 @@
 // DocP backend entry point: connect to MongoDB, resume unfinished processing,
 // and serve the API + built UI. App code lives in src/ (see docs/capture/CONTEXT.md).
-const config = require('./src/config');
+const config = require('./src/core/config');
 const { createApp } = require('./src/app');
-const { connect } = require('./src/db');
-const { recoverStuck } = require('./src/pipeline');
+const { connect } = require('./src/core/db');
+const { recoverStuck } = require('./src/features/intake/pipeline');
 
 const app = createApp();
 

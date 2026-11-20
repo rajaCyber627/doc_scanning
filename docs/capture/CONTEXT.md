@@ -121,23 +121,42 @@ Entra ID / Active Directory.
 
 ## 6. Current state of DocP
 
-**Since P01** the backend is modular (Express + Mongoose):
+**Since P01** the backend is modular, organized as **core / providers / models / features**:
 
 ```
-backend/app.js            entry: connect DB → recoverStuck() → listen
-backend/src/app.js        createApp() — mounts routers (used by tests, no DB/listen)
-backend/src/config/       env + model IDs (config.models.main / .fast) + pipeline settings
-backend/src/clients/      s3, textract, anthropic, BUCKET  (tests swap in tests/fakes/clients.js)
-backend/src/models/       File, Folder, User, TableResult, SavedPrompt, Chunk, Batch, AuditEvent, MockPartnerRecord
-backend/src/services/     extraction, ocr (Textract), ai (Claude), embeddings (Voyage), storage
-backend/src/pipeline/     stages.js (store → hash → extract → classify → [ready] → index → handoff),
-                          runner.js (retries, resume, stageHistory), queue.js (in-process), errors.js (humanizeError)
-backend/src/audit/        emitAudit({ userId, action, documentId, details }) — append-only, forwarded to partner
-backend/src/partner/      PartnerAdapter, MockPartnerAdapter, seed-people.json (getPartner())
-backend/src/routes/       auth, prompts, files, search, tables, folders, query (same /api paths as before)
-backend/tests/            Jest + supertest + mongodb-memory-server; `npm test`
+backend/
+  app.js                      entry: connect DB → recoverStuck() → listen
+  scripts/                    one-off scripts (backfill-embeddings, migrate-hash-passwords)
+  src/
+    app.js                    createApp(): mounts every features/<name>/routes.js (no DB/listen)
+    core/                     shared plumbing — no HR/business logic
+      config.js               env, model IDs (config.models.main/.fast), pipeline settings
+      db.js                   connect()
+      queue.js                InProcessQueue (swap for SQS later; same add()/onIdle())
+      errors.js               humanizeError() → { code, message, retryable }
+      audit/                  emitAudit() + AuditEvent.model (append-only, forwarded to partner)
+    providers/                outside services, each behind a small module (+ client.js tests fake)
+      storage/                S3 client + s3GetBuffer
+      ocr/                    Textract client + runTextract
+      llm/                    Anthropic client
+      embeddings/             Voyage (embed, embedBatch)
+      email/                  SMTP (OTP / notices)
+      partner/                PartnerAdapter, MockPartnerAdapter, MockPartnerRecord.model, seed-people.json
+    models/                   shared records only: File, User, Folder, Batch
+    features/                 one folder per feature: routes.js + its logic + its own models
+      auth/  prompts/  documents/ (CRUD, extraction, overview)  intake/ (pipeline, runner, stages)
+      folders/  tables/  search/  query/ (answering, semanticIndex, Chunk.model)
+  tests/
+    unit/  integration/       `npm test`, `npm run test:unit`, `npm run test:integration`
+    support/                  setupEnv, mockProviders (global fakes), helpers, fakes/, fixtures/
 ```
-Root `File.js`, `userModel.js`, `connection.js` etc. are one-line shims for the old scripts.
+
+**Dependency rules:** `features → core, providers, models`; `providers → core`;
+`core/audit → providers/partner`; nothing imports a feature except `src/app.js` and
+another feature's public module (e.g. `intake/stages` uses `documents/extraction`).
+**New feature = new folder** under `src/features/` with `routes.js`, then add its name
+to `FEATURES` in `src/app.js`. **New outside service = new folder** under
+`src/providers/` with a `client.js` (faked in `tests/support/mockProviders.js`).
 Pipeline stages: blocking stages must pass before `status: 'ready'`; non-blocking failures are
 audited (`pipeline.stage_failed`) but don't fail the document. Non-retryable errors (e.g.
 `OCR_NOT_ACTIVATED`) fail on the first attempt with a readable `error` + `errorCode`.
@@ -191,8 +210,10 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
 2. For non-trivial tasks, present a short plan (files, data changes, risks) and
    **wait for approval** before editing.
 3. Keep existing features working. No unrelated refactors.
-4. New backend logic goes in modules under `backend/src/` (created in P01), not in
-   `app.js`.
+4. Follow the layout and dependency rules in §6: feature code in
+   `backend/src/features/<feature>/`, outside services in `backend/src/providers/`,
+   shared plumbing in `backend/src/core/`. Tests go in `backend/tests/unit` or
+   `backend/tests/integration`. Work on branch `feature/capture-hub`.
 5. Add or update tests for new logic; run them and report results honestly,
    including failures.
 6. Every capture action emits an audit event; respect the restricted-record rules
