@@ -28,6 +28,8 @@ export interface BatchSummary {
   _id: string;
   name: string;
   source: string;
+  kind?: "upload" | "scan";
+  boxId?: string;
   folderId: string | null;
   status: "open" | "processing" | "completed";
   counts: BatchCounts;

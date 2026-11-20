@@ -31,6 +31,7 @@ router.get(
   })
 );
 router.post('/api/files/:id/split/suggest', handle('suggest split', async (req, res) => res.json(await service.suggest(req.params.id, (req.body || {}).userId))));
+router.post('/api/files/:id/split/keep', handle('keep whole', async (req, res) => res.json(await service.keepWhole(req.params.id, (req.body || {}).userId))));
 router.post('/api/files/:id/split', handle('split', async (req, res) => res.json(await service.split(req.params.id, req.body || {}))));
 
 // Printable separator sheet; ?documentType=&employeeId=&copies=

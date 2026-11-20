@@ -40,6 +40,8 @@ router.post('/api/files/:id/review', async (req, res) => {
     const current = await File.findById(req.params.id).select('status reviewReasons userId batchId');
     if (!current) return res.status(404).json({ message: 'File not found' });
     if (current.status !== 'needs_review') return res.status(409).json({ message: 'This document is not waiting for review' });
+    if (current.reviewReasons.some((r) => r.stage === 'splitting'))
+      return res.status(409).json({ message: 'Split it into its documents, or keep it as one document, first' });
     if (current.reviewReasons.some((r) => r.stage === 'classification'))
       return res.status(409).json({ message: 'Accept or correct the suggested details first' });
     if (current.reviewReasons.some((r) => r.stage === 'duplicates'))

@@ -6,7 +6,7 @@ import AppShell from "../../components/AppShell";
 import { getUser } from "../../auth";
 import { errorMessage } from "../upload/uploadApi";
 import { getTaxonomy, Taxonomy } from "../metadata/metadataApi";
-import { getPages, getPagesPdf, PagesInfo, splitFile, suggestSplit, Suggestion } from "./splitApi";
+import { getPages, getPagesPdf, keepWhole, PagesInfo, splitFile, suggestSplit, Suggestion } from "./splitApi";
 import { buildRequest, keptPages, partsFromCuts, PartMeta } from "./splitPlan";
 import SeparatorSheetCard from "./SeparatorSheetCard";
 
@@ -196,6 +196,31 @@ export default function SplitPage() {
           )}
         </div>
       </div>
+      {info.splitPending && info.splittable && (
+        <div className="card" style={{ padding: 12, marginBottom: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }} role="status">
+          <span style={{ flex: 1, minWidth: 220 }}>
+            The AI thinks this scan holds <strong>{info.suggestion?.parts.length}</strong> documents — its cuts are placed below. Check them, then preview and split, or keep it as one document.
+          </span>
+          <button
+            className="btn btn-sm"
+            disabled={!!busy}
+            onClick={async () => {
+              setBusy("keep");
+              try {
+                await keepWhole(id, user._id);
+                message.success("Kept as one document");
+                nav(`/files/${id}`);
+              } catch (e) {
+                message.error(errorMessage(e, "Could not keep it as one"));
+              } finally {
+                setBusy("");
+              }
+            }}
+          >
+            Keep as one document
+          </button>
+        </div>
+      )}
       {!info.splittable && (
         <div className="card" style={{ padding: 12, marginBottom: 12 }}>
           This document can't be split: {info.reason?.toLowerCase()}.

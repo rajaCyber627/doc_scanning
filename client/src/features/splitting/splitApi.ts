@@ -28,6 +28,7 @@ export interface PagesInfo {
   pages: PageInfo[];
   separatorParts: { from: number; to: number; prefill: { documentType?: string; employeeId?: string } }[];
   suggestion: Suggestion | null;
+  splitPending?: boolean; // a scan batch's AI suggestion waits for a decision
   splitInto: string[];
   splitFrom: { fileId: string; part: number; pages: number[] } | null;
 }
@@ -55,3 +56,4 @@ export const splitFile = (fileId: string, userId: string, req: SplitRequest) =>
   axios.post(`/api/files/${fileId}/split`, { userId, ...req }).then((r) => r.data as { splitId: string; parts: { fileId: string; fileName: string; pages: number[] }[] });
 export const getSeparatorSheet = (params: { documentType?: string; employeeId?: string; copies?: number }) =>
   axios.get("/api/separator-sheet.pdf", { params, responseType: "blob" }).then((r) => r.data as Blob);
+export const keepWhole = (fileId: string, userId: string) => axios.post(`/api/files/${fileId}/split/keep`, { userId }).then((r) => r.data as { status: string });

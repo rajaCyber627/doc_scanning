@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import { PDFDocument } from "pdf-lib";
 import AppShell from "../../components/AppShell";
@@ -68,6 +68,8 @@ function toJpeg(img: Img): Promise<Blob> {
 export default function CameraScanPage() {
   const user = getUser()!;
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const batchId = params.get("batch") || undefined;
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const adjustRef = useRef<HTMLCanvasElement>(null);
@@ -284,9 +286,15 @@ export default function CameraScanPage() {
       const bytes = await pdf.save();
       const fname = `${(name.trim() || `Camera scan ${new Date().toISOString().slice(0, 16).replace("T", " ")}`).replace(/[\\/:*?"<>|]+/g, "-")}.pdf`;
       const file = new File([bytes], fname, { type: "application/pdf" });
-      const doc = await uploadFile(file, { userId: user._id, hints: { source: "camera", device: deviceLabel(navigator.userAgent), pages: String(pages.length) } });
+      const doc = await uploadFile(file, { userId: user._id, batchId, hints: { source: "camera", device: deviceLabel(navigator.userAgent), pages: String(pages.length) } });
       message.success(`Saved "${fname}" — it is being read now`);
-      nav(`/files/${doc._id}`);
+      if (batchId) {
+        // keep scanning into the same batch
+        pages.forEach((p) => URL.revokeObjectURL(p.url));
+        setPages([]);
+        setName("");
+        setMode("camera");
+      } else nav(`/files/${doc._id}`);
     } catch (e) {
       message.error(errorMessage(e, "Could not save the scan"));
     } finally {
@@ -320,6 +328,11 @@ export default function CameraScanPage() {
           <span className="faint" style={{ fontSize: 13 }}>
             Photograph each page — it is cropped, straightened and cleaned up, then saved as one PDF.
           </span>
+          {batchId && (
+            <div style={{ fontSize: 13, marginTop: 4 }}>
+              Adding to a scan batch · <a href={`/batches/${batchId}`} onClick={(e) => { e.preventDefault(); nav(`/batches/${batchId}`); }}>back to the batch</a>
+            </div>
+          )}
         </div>
         {pages.length > 0 && mode !== "review" && (
           <button className="btn btn-sm" onClick={() => setMode("review")}>

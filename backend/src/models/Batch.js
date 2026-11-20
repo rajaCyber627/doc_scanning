@@ -30,6 +30,15 @@ const batchSchema = new mongoose.Schema(
     status: { type: String, enum: ['open', 'processing', 'completed'], default: 'open' },
     closedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
+    // ----- Scan batches (P14) -----
+    kind: { type: String, enum: ['upload', 'scan'], default: 'upload' },
+    boxId: { type: String, default: '' }, // physical box / folder label on the paper
+    expectedPages: { type: Number, default: null },
+    // separators: cut at separator sheets only · suggest: else the AI suggests cuts for a
+    // person to check · auto: else the AI's cuts are applied
+    splitMode: { type: String, enum: ['separators', 'suggest', 'auto'], default: 'suggest' },
+    // Quality control sample: { percent, sampledAt, sampledBy, items: [{ fileId, result, note, by, at }] }
+    qc: { type: mongoose.Schema.Types.Mixed, default: null },
     counts: {
       total: { type: Number, default: 0 },
       uploaded: { type: Number, default: 0 },

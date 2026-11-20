@@ -89,6 +89,9 @@ const fileSchema = new mongoose.Schema(
     splitLock: { type: String, default: null },
     splitFrom: { type: mongoose.Schema.Types.Mixed, default: null },
     splitSuggestion: { type: mongoose.Schema.Types.Mixed, default: null }, // AI-suggested cuts
+    splitRemoved: { type: [Number], default: [] }, // pages of a split original left out (separators, blanks)
+    // QC (P14): failed the quality check → { note, by, at }; the paper must be rescanned
+    rescan: { type: mongoose.Schema.Types.Mixed, default: null },
     // Merge (P12): { sources: [fileIds], pages: [{ fileId, page, rotate }], pageTexts, hasTextLayer, prefill }
     mergeOf: { type: mongoose.Schema.Types.Mixed, default: null },
     // confidentiality can never be set below this (a merge takes its strictest source)

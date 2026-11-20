@@ -309,7 +309,14 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   'hotfolders', local share under HOTFOLDER_ROOT or S3 prefix, stability check, import → File
   source=scanner + batch per sub-folder/day, move to .imported/.rejected, HotFolderImport log,
   scheduler started from backend/app.js), storage.listObjects. See `docs/capture/scanning.md`.
-- [ ] P14 Batch scanning
+- [x] P14 Batch scanning — `features/batches/scan.js` (Batch.kind 'scan' + boxId, expectedPages,
+  splitMode separators|suggest|auto, qc; createScanBatch, summarize → pages received / in
+  documents / removed (File.splitRemoved) / missing, counts by tag, byType/byPerson; QC sample
+  (Setting 'qc', default 10%) + results → File.rescan + RESCAN reason; reconciliation CSV/PDF).
+  splitting/service aiSplitForBatch in the `separate` stage (SPLIT_SUGGESTED reason, classify
+  waits) + keepWhole; hot folder sub-folder = box ID → scan batch. Client ScanBatchView (on
+  BatchPage for scan batches), start form on BatchesPage, camera `?batch=`, SplitPage "Keep as
+  one document". See `docs/capture/batch-scanning.md`.
 - [ ] P15 Email capture
 - [ ] P16 Import from shared drives
 - [ ] P17 Paper conversion method (document)

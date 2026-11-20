@@ -983,3 +983,12 @@ input[type="checkbox"]:focus-visible {
 .scan-adjust { max-width: 100%; touch-action: none; border-radius: 6px; cursor: crosshair; }
 .scan-pages { display: flex; flex-wrap: wrap; gap: 10px; }
 ul.tight { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 3px; }
+
+/* --- scan batches (P14) --- */
+.scan-recon { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px; margin-bottom: 12px; font-size: 12px; }
+@media (max-width: 700px) { .scan-recon { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.progress { height: 6px; border-radius: 3px; background: var(--overlay); margin-top: 6px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); }
+.batch-stat.clickable { cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.batch-stat.selected { outline: 2px solid var(--accent); }
+.scan-batch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }

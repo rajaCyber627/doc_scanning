@@ -15,7 +15,7 @@ const OcrPage = require('../ocr/OcrPage.model');
 const { indexDocument, syncToPartner } = require('../search/indexer');
 const { checkDuplicates } = require('../duplicates/service');
 const { runClassification } = require('../classification/service');
-const { autoSplit, isSplit } = require('../splitting/service');
+const { autoSplit, aiSplitForBatch, hasSplitSuggestion, isSplit } = require('../splitting/service');
 const { partText } = require('../splitting/partText');
 
 /**
@@ -111,8 +111,11 @@ const STAGES = [
         if (r) await File.updateOne({ _id: f._id }, r);
         Object.assign(f, r || {});
       }
-      await autoSplit(f, /pdf/i.test(f.mimeType || '') ? await ctx.getBuffer() : null);
-      return undefined;
+      const original = /pdf/i.test(f.mimeType || '') ? await ctx.getBuffer() : null;
+      if (await autoSplit(f, original)) return undefined;
+      // scan batches without separator sheets: the AI finds the documents (P14)
+      const r = await aiSplitForBatch(f, original);
+      return r && r !== 'split' ? r : undefined;
     },
   },
   {
@@ -129,7 +132,8 @@ const STAGES = [
     blocking: true,
     // AI suggestions for type / person / confidentiality / details → review queue.
     async run(ctx) {
-      return isSplit(ctx.file) ? undefined : runClassification(ctx.file);
+      // a split original is represented by its parts; a suggested split waits for a person
+      return isSplit(ctx.file) || hasSplitSuggestion(ctx.file) ? undefined : runClassification(ctx.file);
     },
   },
   {

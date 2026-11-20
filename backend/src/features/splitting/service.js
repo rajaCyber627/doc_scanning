@@ -17,7 +17,8 @@ const File = require('../../models/File');
 const Setting = require('../../models/Setting');
 const OcrPage = require('../ocr/OcrPage.model');
 const metadata = require('../metadata/service');
-const { getSettings: getAiSettings } = require('../classification/service');
+const { getSettings: getAiSettings, runClassification } = require('../classification/service');
+const Batch = require('../../models/Batch');
 const { pageSource, pageTexts, pageJpegs, loadPdf } = require('./pages');
 const separators = require('./separators');
 const { suggestSplits, SuggestFailed } = require('./suggest');
@@ -95,6 +96,7 @@ async function getPages(fileId, userId) {
     })),
     separatorParts: a.separators.length ? separators.partsFromSeparators(a.pageCount, a.separators) : [],
     suggestion: file.splitSuggestion || null,
+    splitPending: hasSplitSuggestion(file),
     splitInto: file.splitInto || [],
     splitFrom: file.splitFrom || null,
   };
@@ -263,6 +265,7 @@ async function applySplit(parent, a, plan, { actor = null, via = 'manual' } = {}
   const open = parent.reviewReasons || [];
   const parentUpdate = {
     splitInto: created.map((c) => c.child._id),
+    splitRemoved: plan.removed,
     splitAt: now,
     splitBy: actor,
     splitLock: null,
@@ -330,6 +333,73 @@ async function autoSplit(file, original) {
   return true;
 }
 
+const SPLIT_STAGE = 'splitting';
+const withoutSplitReasons = (reasons) => (reasons || []).filter((r) => r.stage !== SPLIT_STAGE);
+
+/**
+ * Pipeline, scan batches (P14): a stack scanned without separator sheets → the AI finds
+ * where each document starts. splitMode "auto" applies the cuts; "suggest" (default) keeps
+ * them for a person to check in the page view. Returns fields to save, 'split', or null.
+ */
+async function aiSplitForBatch(file, original) {
+  if (!file.batchId || file.splitFrom || file.mergeOf || isSplit(file) || !(file.pageCount > 1)) return null;
+  const batch = await Batch.findById(file.batchId).select('kind splitMode').lean();
+  if (!batch || batch.kind !== 'scan' || batch.splitMode === 'separators') return null;
+  if (!(await getAiSettings()).aiEnabled) return null;
+  let a;
+  try {
+    a = await analyse(file, { original });
+  } catch (e) {
+    if (e.code === 'NO_PAGES' || e.code === 'DAMAGED_FILE') return null;
+    throw e;
+  }
+  let r;
+  try {
+    r = await suggestSplits({ taxonomy: await metadata.getTaxonomy(), pages: a.pages });
+  } catch (e) {
+    if (e instanceof SuggestFailed) return null; // the stack stays one document; staff can split by hand
+    throw e;
+  }
+  const suggestion = { ...r, at: new Date() };
+  await emitAudit({ userId: file.userId, action: 'split.suggested', documentId: file._id, details: { cuts: r.cuts.map((c) => c.page), model: r.model, batchId: String(file.batchId) } });
+  if (r.parts.length < 2) return { splitSuggestion: suggestion };
+  if (batch.splitMode === 'auto') {
+    await File.updateOne({ _id: file._id }, { splitSuggestion: suggestion });
+    const plan = validatePlan({ parts: r.parts.map((p) => ({ from: p.from, to: p.to, documentType: p.documentType })) }, a.pageCount);
+    await applySplit(file, a, plan, { via: 'ai' });
+    return 'split';
+  }
+  return {
+    splitSuggestion: suggestion,
+    reviewReasons: [
+      ...withoutSplitReasons(file.reviewReasons),
+      { stage: SPLIT_STAGE, code: 'SPLIT_SUGGESTED', message: `This looks like ${r.parts.length} documents — check the suggested cuts in the page view` },
+    ],
+  };
+}
+
+const hasSplitSuggestion = (file) => (file.reviewReasons || []).some((r) => r.stage === SPLIT_STAGE);
+
+/** The reviewer says the stack is really one document: drop the suggestion, classify it. */
+async function keepWhole(fileId, userId) {
+  const file = await load(fileId, userId);
+  if (!hasSplitSuggestion(file)) throw new SplitError(409, 'There is no split suggestion to dismiss');
+  const now = new Date();
+  const open = (file.reviewReasons || []).filter((r) => r.stage === SPLIT_STAGE);
+  file.reviewReasons = withoutSplitReasons(file.reviewReasons);
+  file.resolvedReviewReasons = [...(file.resolvedReviewReasons || []), ...open.map((r) => ({ ...r, resolvedAt: now, resolvedBy: userId, resolution: 'kept_whole' }))];
+  await file.save();
+  await emitAudit({ userId, action: 'split.dismissed', documentId: file._id, details: { suggestedParts: (file.splitSuggestion && file.splitSuggestion.parts || []).length } });
+  // the stack was never classified (it waited for the split decision): classify it now
+  const upd = (await runClassification(await File.findById(file._id))) || {};
+  const saved = await File.findByIdAndUpdate(file._id, upd, { new: true });
+  const status = (saved.reviewReasons || []).length ? 'needs_review' : 'ready';
+  await File.updateOne({ _id: file._id }, { status });
+  events.emit('document.changed', String(file._id));
+  if (file.batchId) events.emit('batch.touch', String(file.batchId));
+  return { status, reviewReasons: saved.reviewReasons };
+}
+
 /** Links between a split original and its parts (light: no page analysis). */
 async function lineage(fileId, userId) {
   const file = await load(fileId, userId);
@@ -354,4 +424,4 @@ async function pagesPdf(fileId, userId) {
   return (await pageSource(file)).buffer;
 }
 
-module.exports = { lineage, getPages, suggest, split, autoSplit, pagesPdf, getSettings, saveSettings, validatePlan, isSplit, SplitError };
+module.exports = { aiSplitForBatch, keepWhole, hasSplitSuggestion, lineage, getPages, suggest, split, autoSplit, pagesPdf, getSettings, saveSettings, validatePlan, isSplit, SplitError };

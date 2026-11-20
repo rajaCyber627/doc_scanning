@@ -9,6 +9,7 @@ import { useUploads } from "../upload/useUploads";
 import UploadTray from "../upload/UploadTray";
 import { errorMessage } from "../upload/uploadApi";
 import ItemStateBadge from "./ItemStateBadge";
+import ScanBatchView from "./ScanBatchView";
 import DropZone from "../upload/DropZone";
 import {
   getBatch,
@@ -74,6 +75,7 @@ export default function BatchPage() {
     );
 
   const { batch } = data;
+  if (batch.kind === "scan") return <ScanBatchView batchId={batch._id} userId={user._id} />;
   const c = batch.counts;
   const failedDocs = c.failed;
 

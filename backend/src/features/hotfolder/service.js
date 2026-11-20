@@ -153,6 +153,9 @@ const sourceFor = (profile) => (profile.kind === 's3' ? s3Source(profile) : loca
 
 // ---------------------------------------------------------------- import
 async function batchFor(profile, sub) {
+  // a scan batch started for this box (sub-folder named after its box ID) takes the files
+  const scanBatch = sub ? await require('../batches/scan').openScanBatchForBox(profile.ownerId, sub) : null;
+  if (scanBatch) return scanBatch;
   if (profile.batchMode === 'none') return null;
   const day = new Date().toISOString().slice(0, 10);
   const label = profile.batchMode === 'daily' || !sub ? day : sub;
