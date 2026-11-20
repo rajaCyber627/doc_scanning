@@ -28,6 +28,10 @@ class MockPartnerAdapter extends PartnerAdapter {
       : null;
   }
 
+  async getPerson(personId) {
+    return people.find((p) => p.personId === String(personId)) || null;
+  }
+
   async lookupPerson(query) {
     const q = String(query || '').trim().toLowerCase();
     if (!q) return [];

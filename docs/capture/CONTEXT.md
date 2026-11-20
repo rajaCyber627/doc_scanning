@@ -271,7 +271,13 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   supersedesDocumentId) / discard; batch bulk decision). Review endpoint refuses while a duplicate
   decision is open. `GET /api/files/:id/preview`. Client DuplicatePanel (+ compare modal), batch
   bulk actions. See `docs/capture/duplicates.md`.
-- [ ] P09 Metadata entry
+- [x] P09 Metadata entry — `features/metadata` (taxonomy models RecordCategory/DocumentType seeded
+  from `seed-taxonomy.json`: 10 categories, 74 types; base fields in `fields.js`; service normalize/
+  validate/applyMetadata with per-field audit, bulk preview/apply, next-incomplete, admin type save +
+  JSON import/export; person verified via `PartnerAdapter.getPerson`). File gains metadataStatus/
+  metadataErrors; confidentialityLevel → File.confidentiality. Handoff gated on metadataStatus
+  complete. `core/access` viewer.isAdmin. Client MetadataPanel (+PersonPicker, shortcuts),
+  BulkEditModal, TaxonomyPage (admin nav). See `docs/capture/metadata.md`.
 - [ ] P10 Automated / assisted classification
 - [ ] P11 Document splitting
 - [ ] P12 Document merging

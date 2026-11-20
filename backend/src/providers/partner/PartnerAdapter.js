@@ -39,4 +39,10 @@ class PartnerAdapter {
   }
 }
 
+/** One person by the partner's id (used to verify a picked person server-side). */
+// eslint-disable-next-line no-unused-vars
+PartnerAdapter.prototype.getPerson = async function getPerson(personId) {
+  throw new Error('PartnerAdapter.getPerson not implemented');
+};
+
 module.exports = PartnerAdapter;

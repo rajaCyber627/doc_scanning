@@ -150,6 +150,8 @@ function buildPayload(file, sd) {
 async function syncToPartner(fileId) {
   const file = await File.findById(fileId).lean();
   if (!file || file.status !== 'ready' || file.supersededBy) return null; // not ready, or an old version
+  // the system of record needs the standard metadata: hold back until it is complete
+  if (config.metadata.requiredForHandoff && file.metadataStatus !== 'complete') return null;
   const sd = await SearchDoc.findOne({ fileId: file._id }).lean();
   const payload = buildPayload(file, sd);
   const { partnerDocumentId } = await getPartner().pushDocument(file, payload);

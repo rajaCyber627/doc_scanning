@@ -18,6 +18,7 @@ async function viewerFor(userId) {
   return {
     userId: String(userId),
     canSeeRestricted: perms.has(RESTRICTED_PERMISSION) || user.role === 'admin',
+    isAdmin: perms.has('admin') || user.role === 'admin',
   };
 }
 

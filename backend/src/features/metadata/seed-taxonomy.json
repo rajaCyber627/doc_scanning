@@ -1,0 +1,1165 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "key": "personnel",
+      "name": "Personnel",
+      "hrFunctionalArea": "Personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "order": 1
+    },
+    {
+      "key": "benefits",
+      "name": "Benefits",
+      "hrFunctionalArea": "Benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "order": 2
+    },
+    {
+      "key": "medical-and-confidential",
+      "name": "Medical & Confidential",
+      "hrFunctionalArea": "Medical",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Medical records (confirm LVA schedule)",
+      "order": 3
+    },
+    {
+      "key": "fmla-and-leave",
+      "name": "FMLA & Leave",
+      "hrFunctionalArea": "Leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "order": 4
+    },
+    {
+      "key": "ada-and-accommodation",
+      "name": "ADA & Accommodation",
+      "hrFunctionalArea": "Accommodation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "ADA accommodation (confirm LVA schedule)",
+      "order": 5
+    },
+    {
+      "key": "workers-compensation",
+      "name": "Workers' Compensation",
+      "hrFunctionalArea": "Workers' Compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "order": 6
+    },
+    {
+      "key": "employee-relations",
+      "name": "Employee Relations",
+      "hrFunctionalArea": "Employee Relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "order": 7
+    },
+    {
+      "key": "recruitment",
+      "name": "Recruitment",
+      "hrFunctionalArea": "Recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "order": 8
+    },
+    {
+      "key": "classification-and-compensation",
+      "name": "Classification & Compensation",
+      "hrFunctionalArea": "Classification & Compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "order": 9
+    },
+    {
+      "key": "training-and-development",
+      "name": "Training & Development",
+      "hrFunctionalArea": "Training",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Training records (confirm LVA schedule)",
+      "order": 10
+    }
+  ],
+  "documentTypes": [
+    {
+      "key": "personnel.employment-applications-and-related-documents",
+      "name": "Employment applications and related documents",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "personnel.offer-letters",
+      "name": "Offer letters",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "startDate",
+          "label": "Start date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "key": "salary",
+          "label": "Annual salary",
+          "type": "number",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "personnel.personnel-agreements",
+      "name": "Personnel agreements",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "personnel.job-changes",
+      "name": "Job changes",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "personnel.promotions",
+      "name": "Promotions",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "key": "newPositionTitle",
+          "label": "New position title",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "personnel.transfers",
+      "name": "Transfers",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "key": "newDepartment",
+          "label": "New department",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "personnel.demotions",
+      "name": "Demotions",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "personnel.salary-actions",
+      "name": "Salary actions",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "newSalary",
+          "label": "New salary",
+          "type": "number",
+          "required": false
+        },
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 8
+    },
+    {
+      "key": "personnel.classification-actions",
+      "name": "Classification actions",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 9
+    },
+    {
+      "key": "personnel.position-changes",
+      "name": "Position changes",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 10
+    },
+    {
+      "key": "personnel.employee-acknowledgements",
+      "name": "Employee acknowledgements",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 11
+    },
+    {
+      "key": "personnel.separation-documentation",
+      "name": "Separation documentation",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "separationDate",
+          "label": "Separation date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "key": "separationReason",
+          "label": "Reason",
+          "type": "select",
+          "required": false,
+          "options": [
+            "Resignation",
+            "Retirement",
+            "Termination",
+            "End of appointment",
+            "Other"
+          ]
+        }
+      ],
+      "active": true,
+      "order": 12
+    },
+    {
+      "key": "personnel.other-official-personnel-documents",
+      "name": "Other official personnel documents",
+      "categoryKey": "personnel",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Personnel file (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 13
+    },
+    {
+      "key": "benefits.enrollment-documentation",
+      "name": "Enrollment documentation",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "planYear",
+          "label": "Plan year",
+          "type": "number",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "benefits.benefit-elections",
+      "name": "Benefit elections",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "planYear",
+          "label": "Plan year",
+          "type": "number",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "benefits.supporting-eligibility-documentation",
+      "name": "Supporting eligibility documentation",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "benefits.retirement-related-documentation",
+      "name": "Retirement-related documentation",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "benefits.beneficiary-information",
+      "name": "Beneficiary information",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "benefits.benefit-correspondence",
+      "name": "Benefit correspondence",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "benefits.qualifying-life-event-documentation",
+      "name": "Qualifying life event documentation",
+      "categoryKey": "benefits",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Benefits (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "medical-and-confidential.medical-certifications",
+      "name": "Medical certifications",
+      "categoryKey": "medical-and-confidential",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Medical records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "medical-and-confidential.medical-documentation",
+      "name": "Medical documentation",
+      "categoryKey": "medical-and-confidential",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Medical records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "medical-and-confidential.fitness-for-duty-records",
+      "name": "Fitness-for-duty records",
+      "categoryKey": "medical-and-confidential",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Medical records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "medical-and-confidential.return-to-work-documentation",
+      "name": "Return-to-work documentation",
+      "categoryKey": "medical-and-confidential",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Medical records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "medical-and-confidential.other-confidential-medical-information",
+      "name": "Other confidential medical information",
+      "categoryKey": "medical-and-confidential",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Medical records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "fmla-and-leave.fmla-requests",
+      "name": "FMLA requests",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "leaveStart",
+          "label": "Leave start",
+          "type": "date",
+          "required": false
+        },
+        {
+          "key": "leaveEnd",
+          "label": "Leave end",
+          "type": "date",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "fmla-and-leave.eligibility-notices",
+      "name": "Eligibility notices",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "fmla-and-leave.medical-certifications",
+      "name": "Medical certifications",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "fmla-and-leave.designation-notices",
+      "name": "Designation notices",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "fmla-and-leave.leave-documentation",
+      "name": "Leave documentation",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "fmla-and-leave.leave-tracking-records",
+      "name": "Leave tracking records",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "fmla-and-leave.return-to-work-documentation",
+      "name": "Return-to-work documentation",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "fmla-and-leave.leave-related-correspondence",
+      "name": "Leave-related correspondence",
+      "categoryKey": "fmla-and-leave",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "FMLA / leave (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 8
+    },
+    {
+      "key": "ada-and-accommodation.accommodation-requests",
+      "name": "Accommodation requests",
+      "categoryKey": "ada-and-accommodation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "ADA accommodation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "ada-and-accommodation.interactive-process-documentation",
+      "name": "Interactive-process documentation",
+      "categoryKey": "ada-and-accommodation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "ADA accommodation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "ada-and-accommodation.medical-documentation",
+      "name": "Medical documentation",
+      "categoryKey": "ada-and-accommodation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "ADA accommodation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "ada-and-accommodation.accommodation-decisions",
+      "name": "Accommodation decisions",
+      "categoryKey": "ada-and-accommodation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "ADA accommodation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "decision",
+          "label": "Decision",
+          "type": "select",
+          "required": false,
+          "options": [
+            "Approved",
+            "Approved with changes",
+            "Denied"
+          ]
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "ada-and-accommodation.related-correspondence",
+      "name": "Related correspondence",
+      "categoryKey": "ada-and-accommodation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "ADA accommodation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "workers-compensation.incident-documentation",
+      "name": "Incident documentation",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Claim number",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "incidentDate",
+          "label": "Incident date",
+          "type": "date",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "workers-compensation.first-reports-of-injury",
+      "name": "First reports of injury",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Claim number",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "incidentDate",
+          "label": "Date of injury",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "workers-compensation.medical-documentation",
+      "name": "Medical documentation",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "workers-compensation.claim-correspondence",
+      "name": "Claim correspondence",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Claim number",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "workers-compensation.return-to-work-records",
+      "name": "Return-to-work records",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "workers-compensation.claim-status-documents",
+      "name": "Claim status documents",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "workers-compensation.related-reports",
+      "name": "Related reports",
+      "categoryKey": "workers-compensation",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Workers' compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "employee-relations.complaints",
+      "name": "Complaints",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "employee-relations.counseling-documentation",
+      "name": "Counseling documentation",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "employee-relations.disciplinary-actions",
+      "name": "Disciplinary actions",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "actionType",
+          "label": "Action",
+          "type": "select",
+          "required": false,
+          "options": [
+            "Verbal warning",
+            "Written reprimand",
+            "Suspension",
+            "Demotion",
+            "Dismissal"
+          ]
+        },
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "employee-relations.investigations",
+      "name": "Investigations",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "employee-relations.grievances",
+      "name": "Grievances",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Restricted",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "caseNumber",
+          "label": "Case number",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "grievanceStep",
+          "label": "Step",
+          "type": "select",
+          "required": false,
+          "options": [
+            "Step 1",
+            "Step 2",
+            "Step 3",
+            "Panel hearing"
+          ]
+        }
+      ],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "employee-relations.performance-related-documentation",
+      "name": "Performance-related documentation",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "employee-relations.employee-statements",
+      "name": "Employee statements",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "employee-relations.management-responses",
+      "name": "Management responses",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 8
+    },
+    {
+      "key": "employee-relations.supporting-evidence",
+      "name": "Supporting evidence",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 9
+    },
+    {
+      "key": "employee-relations.final-determinations",
+      "name": "Final determinations",
+      "categoryKey": "employee-relations",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Employee relations (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 10
+    },
+    {
+      "key": "recruitment.applications",
+      "name": "Applications",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "positionNumber",
+          "label": "Position number",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "recruitment.resumes",
+      "name": "Resumes",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "positionNumber",
+          "label": "Position number",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "recruitment.interview-documentation",
+      "name": "Interview documentation",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "recruitment.selection-documentation",
+      "name": "Selection documentation",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "recruitment.offer-documentation",
+      "name": "Offer documentation",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "startDate",
+          "label": "Start date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "key": "salary",
+          "label": "Annual salary",
+          "type": "number",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "recruitment.background-related-records-where-permitted",
+      "name": "Background-related records where permitted",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "recruitment.recruitment-correspondence",
+      "name": "Recruitment correspondence",
+      "categoryKey": "recruitment",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Recruitment / applicant files (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "classification-and-compensation.classification-studies",
+      "name": "Classification studies",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "classification-and-compensation.compensation-analyses",
+      "name": "Compensation analyses",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "classification-and-compensation.salary-reviews",
+      "name": "Salary reviews",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "classification-and-compensation.job-descriptions",
+      "name": "Job descriptions",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "positionNumber",
+          "label": "Position number",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "classification-and-compensation.position-documentation",
+      "name": "Position documentation",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "classification-and-compensation.pay-actions",
+      "name": "Pay actions",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "effectiveDate",
+          "label": "Effective date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 6
+    },
+    {
+      "key": "classification-and-compensation.supporting-approvals",
+      "name": "Supporting approvals",
+      "categoryKey": "classification-and-compensation",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Classification & compensation (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 7
+    },
+    {
+      "key": "training-and-development.training-completions",
+      "name": "Training completions",
+      "categoryKey": "training-and-development",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Training records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "courseName",
+          "label": "Course",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "completionDate",
+          "label": "Completion date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "training-and-development.certifications",
+      "name": "Certifications",
+      "categoryKey": "training-and-development",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Training records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "certificationName",
+          "label": "Certification",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "expirationDate",
+          "label": "Expires",
+          "type": "date",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "training-and-development.required-training",
+      "name": "Required training",
+      "categoryKey": "training-and-development",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Training records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "courseName",
+          "label": "Course",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "completionDate",
+          "label": "Completion date",
+          "type": "date",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "training-and-development.career-development-documentation",
+      "name": "Career development documentation",
+      "categoryKey": "training-and-development",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Training records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "training-and-development.professional-development-records",
+      "name": "Professional development records",
+      "categoryKey": "training-and-development",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Training records (confirm LVA schedule)",
+      "fields": [],
+      "active": true,
+      "order": 5
+    }
+  ]
+}

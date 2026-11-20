@@ -74,6 +74,13 @@ module.exports = {
     numberAgreement: Number(env.DUPLICATE_NUMBER_AGREEMENT || 0.8),
   },
 
+  metadata: {
+    // Month the City's fiscal year starts (Virginia localities: July → FY2026 = Jul 2025–Jun 2026)
+    fiscalYearStartMonth: int(env.FISCAL_YEAR_START_MONTH, 7),
+    // Documents go to the partner HRDMS only once their required metadata is complete
+    requiredForHandoff: env.METADATA_REQUIRED_FOR_HANDOFF !== 'false',
+  },
+
   search: {
     provider: ['mongo', 'atlas'].includes(env.SEARCH_PROVIDER) ? env.SEARCH_PROVIDER : 'mongo',
   },

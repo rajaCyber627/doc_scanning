@@ -4,6 +4,7 @@ const Ajv = require('ajv/dist/2020');
 const addFormats = require('ajv-formats');
 const request = require('supertest');
 const { startDb, clearDb, stopDb, fixture } = require('../support/helpers');
+const { completeMetadata } = require('../support/metadata');
 const fakes = require('../support/fakes/clients');
 const { createApp } = require('../../src/app');
 const { onIdle } = require('../../src/features/intake/pipeline');
@@ -101,6 +102,8 @@ describe('detection', () => {
 
   test('a file already in the partner HR system (but no longer in the hub) is flagged', async () => {
     const first = await upload('w4.pdf', w4pdf());
+    await completeMetadata(app, first._id, user._id);
+    await settle();
     expect(await MockPartnerRecord.countDocuments({ kind: 'document' })).toBe(1);
     await request(app).delete(`/api/files/${first._id}`); // gone from the hub, still at the partner
     const again = await upload('w4-again.pdf', w4pdf());
@@ -151,6 +154,7 @@ describe('decisions', () => {
     const b = await upload('w4 v2.pdf', w4pdf());
     const r = await decide(b, 'replace', 'Newer scan');
     expect(r.body.replacedFileId).toBe(String(a._id));
+    await completeMetadata(app, b._id, user._id);
     await settle();
     const old = await File.findById(a._id);
     expect(old.supersededBy.equals(b._id)).toBe(true); // never deleted

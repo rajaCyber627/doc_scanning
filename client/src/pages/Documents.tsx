@@ -12,6 +12,7 @@ import { getUploadConfig, UploadConfig, errorMessage } from "../features/upload/
 import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
 import Highlighted from "../features/search/Highlighted";
+import BulkEditModal from "../features/metadata/BulkEditModal";
 import DropZone, { BrowseButtons, DropTargetInfo, useDropTarget, useDropZone } from "../features/upload/DropZone";
 import {
   listFiles,
@@ -35,6 +36,7 @@ export default function Documents() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [uploadCfg, setUploadCfg] = useState<UploadConfig | null>(null);
+  const [bulkEdit, setBulkEdit] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState<{ ids: string[]; label: string; folderId?: string } | null>(null);
@@ -221,6 +223,9 @@ export default function Documents() {
           {dayjs(f.createdAt).format("MMM D, YYYY")}
         </span>
       </span>
+      {isUsable(f) && f.metadataStatus !== "complete" && (
+        <span className="label" title="Document type, employee and other required details are not filled in yet">details missing</span>
+      )}
       <DocumentStatus doc={f} userId={user._id} onRetried={load} />
       <button className="btn btn-sm btn-danger" onClick={(e) => removeFile(e, f)} title="Delete">
         ✕
@@ -266,6 +271,9 @@ export default function Documents() {
             onClick={() => setAsk({ ids: Array.from(selected), label: `${selected.size} file${selected.size > 1 ? "s" : ""}` })}
           >
             💬 Ask {selected.size || ""} selected
+          </button>
+          <button className="btn btn-sm" disabled={selected.size === 0} onClick={() => setBulkEdit(true)}>
+            ✎ Edit details{selected.size ? ` (${selected.size})` : ""}
           </button>
         </div>
 
@@ -361,6 +369,8 @@ export default function Documents() {
           </div>
         )}
       </DropZone>
+
+      {bulkEdit && <BulkEditModal userId={user._id} fileIds={Array.from(selected)} onClose={() => setBulkEdit(false)} onDone={load} />}
 
       <UploadTray
         items={uploads.items}

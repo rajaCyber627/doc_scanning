@@ -11,6 +11,9 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: "⚙" },
 ];
 
+// Admin-only pages are hidden from others (the server enforces it as well).
+const isAdmin = (u: ReturnType<typeof getUser>) => !!u && (u.role === "admin" || (u.permissions || []).includes("admin"));
+
 export default function AppShell({
   children,
   sidebarExtra,
@@ -90,7 +93,7 @@ export default function AppShell({
       <div className="body-grid">
         <aside className="sidebar">
           <div className="nav-section">Workspace</div>
-          {NAV.map((n) => (
+          {[...NAV, ...(isAdmin(user) ? [{ to: "/taxonomy", label: "Document types", icon: "☰", end: false }] : [])].map((n) => (
             <NavLink
               key={n.to}
               to={n.to}

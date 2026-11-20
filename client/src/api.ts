@@ -13,6 +13,8 @@ export interface UserInfo {
   email: string;
   twoFactorEnabled?: boolean;
   customInstructions?: string;
+  role?: string;
+  permissions?: string[];
 }
 
 export interface SavedPromptItem {
@@ -47,6 +49,9 @@ export interface FileItem {
   childSummary?: { created: number; skipped: { name: string; reason: string }[] };
   reviewReasons?: { code: string; message: string; stage?: string; page?: number }[];
   duplicateOf?: { kind: string; where: string }[];
+  metadata?: Record<string, any>;
+  metadataStatus?: "missing" | "incomplete" | "complete";
+  metadataErrors?: { field: string; message: string }[];
   supersedes?: string | null;
   supersededBy?: string | null;
   ocr?: {

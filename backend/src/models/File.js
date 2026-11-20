@@ -71,7 +71,10 @@ const fileSchema = new mongoose.Schema(
     },
     batchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch', default: null, index: true },
     batchItem: { type: Number, default: null }, // index into Batch.items
-    // Standard HR metadata (P09) and AI suggestions (P10)
+    // Standard HR metadata (P09) and AI suggestions (P10). metadataStatus: missing |
+    // incomplete | complete (required fields valid → may be handed to the partner)
+    metadataStatus: { type: String, enum: ['missing', 'incomplete', 'complete'], default: 'missing', index: true },
+    metadataErrors: { type: Array, default: [] }, // [{ field, message }]
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     classification: { type: mongoose.Schema.Types.Mixed, default: {} },
     confidentiality: { type: String, default: null },

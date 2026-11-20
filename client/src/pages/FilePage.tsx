@@ -11,6 +11,7 @@ import ImageViewer from "../components/ImageViewer";
 import RelatedDocuments from "../features/documents/RelatedDocuments";
 import OcrPanel from "../features/ocr/OcrPanel";
 import DuplicatePanel from "../features/duplicates/DuplicatePanel";
+import MetadataPanel from "../features/metadata/MetadataPanel";
 import { getUser } from "../auth";
 import {
   getFile,
@@ -504,6 +505,9 @@ export default function FilePage() {
 
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
+          {(file.status === "ready" || file.status === "needs_review") && (
+            <MetadataPanel fileId={file._id} userId={user._id} initial={file.metadata || {}} status={file.metadataStatus} serverErrors={file.metadataErrors} onSaved={load} />
+          )}
           {(file.duplicateOf?.length ?? 0) > 0 && <DuplicatePanel fileId={file._id} userId={user._id} onChanged={load} />}
           <OcrPanel file={file} userId={user._id} onChanged={load} />
           <RelatedDocuments detail={state} />
