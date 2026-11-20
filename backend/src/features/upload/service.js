@@ -13,7 +13,7 @@ const Batch = require('../../models/Batch');
 const events = require('../../core/events');
 const User = require('../../models/User');
 const UploadSession = require('./UploadSession.model');
-const { typeForName, contentMatches, publicTypes } = require('./fileTypes');
+const { typeForName, contentMatches, mismatchReason, publicTypes } = require('./fileTypes');
 const { enqueueDocument } = require('../intake/pipeline');
 
 class UploadError extends Error {
@@ -214,11 +214,7 @@ async function completeSession(sessionId, { userId, parts }) {
   const type = typeForName(s.fileName);
   const headBytes = await storage.readHead(s.s3Key);
   if (!contentMatches(type, headBytes))
-    throw await failSession(
-      s,
-      `"${s.fileName}" does not contain ${type.label} data. It may be renamed or damaged.`,
-      'CONTENT_MISMATCH'
-    );
+    throw await failSession(s, mismatchReason(type, headBytes, s.fileName), 'CONTENT_MISMATCH');
 
   const hints = s.hints || {};
   const file = await File.create({

@@ -45,6 +45,17 @@ module.exports = {
     maxStoredChars: int(env.TEXT_MAX_STORED_CHARS, 1000000),
   },
 
+  formats: {
+    maxChildren: int(env.FORMATS_MAX_CHILDREN, 200), // attachments / archive entries per container
+    maxContainerDepth: int(env.FORMATS_MAX_CONTAINER_DEPTH, 2), // email in zip ok; deeper nesting is not expanded
+    maxArchiveEntries: int(env.FORMATS_MAX_ARCHIVE_ENTRIES, 1000),
+    maxArchiveBytes: int(env.FORMATS_MAX_ARCHIVE_MB, 500) * 1024 * 1024, // total uncompressed
+    maxCompressionRatio: int(env.FORMATS_MAX_COMPRESSION_RATIO, 200), // zip-bomb guard (large entries only)
+    maxSheetRows: int(env.FORMATS_MAX_SHEET_ROWS, 20000),
+    maxRenditionPages: int(env.FORMATS_MAX_RENDITION_PAGES, 300),
+    sofficePath: env.SOFFICE_PATH || '', // LibreOffice for high-fidelity Office → PDF (optional)
+  },
+
   upload: {
     maxBytes: int(env.UPLOAD_MAX_MB, 100) * 1024 * 1024,
     // Files above this go to S3 as multipart (parallel parts, resumable per part).

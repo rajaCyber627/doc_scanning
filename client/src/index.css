@@ -735,3 +735,17 @@ input[type="checkbox"]:focus-visible {
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* --- related documents (P05) --- */
+.related-doc {
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.related-doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  text-align: left;
+}

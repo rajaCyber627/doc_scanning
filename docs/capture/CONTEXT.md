@@ -244,7 +244,14 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   reasons, OS clutter skipped, keyboard-accessible `BrowseButtons`, rules from the server even for
   very early drops). Used on Documents, Set and Batch pages (batch page: drop = resume).
   Client component tests: `npx react-scripts test` (6 tests).
-- [ ] P05 Electronic document import
+- [x] P05 Electronic document import — 23 types (see `docs/capture/formats.md`): readers in
+  `features/documents/formats/` (office, email, archive, images, zipSafety, pdfBuilder);
+  emails/ZIPs create linked child documents (`documents/children.js`, parentDocumentId,
+  containerDepth, childSummary); new non-blocking `render` stage → PDF view
+  (`renditionS3Key`, LibreOffice if installed else text PDF); HEIC/GIF/BMP converted to JPEG
+  (`ocrSourceS3Key`) for OCR + display; zip-bomb/password/executable protections;
+  `UserFacingError` in core/errors for pre-worded failures. Client: PDF view for new formats,
+  original download link, Related documents sidebar.
 - [ ] P06 OCR
 - [ ] P07 Full-text indexing
 - [ ] P08 Duplicate detection

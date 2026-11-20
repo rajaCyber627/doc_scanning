@@ -27,6 +27,12 @@ const RULES = [
     retryable: false,
   },
   {
+    test: (e) => /password|encrypted|PasswordException/i.test(e.message) || e.name === 'PasswordException',
+    code: 'PASSWORD_PROTECTED',
+    message: 'This file is password-protected. Remove the password and upload it again.',
+    retryable: false,
+  },
+  {
     test: (e) => e.code === 'BadDocumentException' || e.code === 'InvalidPDFException' || /invalid pdf|bad xref/i.test(e.message),
     code: 'DAMAGED_FILE',
     message: 'The file appears to be damaged or password-protected and could not be read.',
@@ -47,7 +53,17 @@ const RULES = [
   },
 ];
 
+/** Errors already worded for users (format problems, limits). Never retried by default. */
+class UserFacingError extends Error {
+  constructor(code, message, retryable = false) {
+    super(message);
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
 function humanizeError(err) {
+  if (err instanceof UserFacingError) return { code: err.code, message: err.message, retryable: err.retryable, raw: err.message };
   const e = err || {};
   const raw = String(e.message || e || 'Processing failed');
   for (const r of RULES) {
@@ -60,4 +76,4 @@ function humanizeError(err) {
   return { code: 'PROCESSING_ERROR', message: raw.slice(0, 500), retryable: true, raw };
 }
 
-module.exports = { humanizeError };
+module.exports = { humanizeError, UserFacingError };

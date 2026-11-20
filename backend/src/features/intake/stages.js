@@ -8,6 +8,8 @@ const { generateOverview } = require('../documents/overview');
 const { embedFile } = require('../query/semanticIndex');
 const config = require('../../core/config');
 const storage = require('../../providers/storage');
+const { createChildren } = require('../documents/children');
+const { buildRendition } = require('../documents/rendition');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -45,15 +47,23 @@ const STAGES = [
   {
     name: 'extract',
     blocking: true,
-    // Text / OCR extraction, then the AI overview (unchanged behaviour from before P01).
+    // Text / OCR extraction (per format), child documents for emails/archives, then the
+    // AI overview.
     async run(ctx) {
       const f = ctx.file;
-      const { rawText, tablesCsv, words } = await extractContent({
+      const extracted = await extractContent({
         s3Key: f.s3Key,
         mimeType: f.mimeType,
         fileName: f.fileName,
         buffer: await ctx.getBuffer(),
+        fileId: f._id,
       });
+      const { rawText, tablesCsv, words } = extracted;
+      ctx.convertedImage = extracted.convertedImage || null; // reused by the render stage
+      let childSummary;
+      if (extracted.children) {
+        childSummary = await createChildren(f, extracted.children, extracted.skipped || []);
+      }
       const overview = await generateOverview(rawText, tablesCsv).catch(() => ({}));
       const text = await fitText(f, rawText || '');
       return {
@@ -63,6 +73,10 @@ const STAGES = [
         summary: overview.summary || '',
         keyFacts: Array.isArray(overview.keyFacts) ? overview.keyFacts : [],
         suggestedQuestions: Array.isArray(overview.suggestedQuestions) ? overview.suggestedQuestions : [],
+        ...(extracted.pageCount ? { pageCount: extracted.pageCount } : {}),
+        ...(extracted.ocrSourceS3Key ? { ocrSourceS3Key: extracted.ocrSourceS3Key } : {}),
+        ...(childSummary ? { childSummary } : {}),
+        ...(extracted.email ? { 'metadata.email': extracted.email } : {}),
       };
     },
   },
@@ -78,6 +92,22 @@ const STAGES = [
     // Semantic-search embeddings (best effort, as before). Full-text indexing: P07.
     async run(ctx) {
       await embedFile(ctx.file);
+    },
+  },
+  {
+    name: 'render',
+    blocking: false,
+    // PDF view for formats browsers can't display (the original is never changed).
+    async run(ctx) {
+      const f = ctx.file;
+      if (f.renditionS3Key) return undefined;
+      let convertedImage = ctx.convertedImage;
+      if (!convertedImage && f.ocrSourceS3Key) convertedImage = await storage.s3GetBuffer(f.ocrSourceS3Key);
+      const r = await buildRendition({ fileName: f.fileName, buffer: await ctx.getBuffer(), rawText: f.rawText, convertedImage });
+      if (!r) return undefined;
+      const key = `${f.s3Key}.view.pdf`;
+      await storage.putStream(key, r.pdf, 'application/pdf');
+      return { renditionS3Key: key, renditionMethod: r.method, ...(r.pageCount && !f.pageCount ? { pageCount: r.pageCount } : {}) };
     },
   },
   {

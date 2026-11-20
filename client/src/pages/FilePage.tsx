@@ -8,14 +8,15 @@ import ResultView from "../components/ResultView";
 import LoadingMessages from "../components/LoadingMessages";
 import PdfViewer from "../components/PdfViewer";
 import ImageViewer from "../components/ImageViewer";
+import RelatedDocuments from "../features/documents/RelatedDocuments";
 import {
   getFile,
   getFileText,
   deleteTable,
   deleteFile,
   updateFile,
-  FileItem,
   TableResultItem,
+  FileDetail,
 } from "../api";
 
 type Tab = "chat" | "tables" | "document";
@@ -23,11 +24,7 @@ type Tab = "chat" | "tables" | "document";
 export default function FilePage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [state, setState] = useState<{
-    file: FileItem;
-    viewUrl: string;
-    tables: TableResultItem[];
-  } | null>(null);
+  const [state, setState] = useState<FileDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("chat");
   const [modal, setModal] = useState<TableResultItem | null>(null);
@@ -52,9 +49,13 @@ export default function FilePage() {
   const file0 = state?.file;
   const isPdf =
     !!file0 && ((file0.mimeType || "").includes("pdf") || file0.fileName.toLowerCase().endsWith(".pdf"));
+  // Images the browser can show (TIFF can't be shown by most browsers → PDF view).
+  // HEIC/GIF/BMP are shown via their converted JPEG (viewUrl), which OCR also read.
   const isImage =
-    !!file0 &&
-    ((file0.mimeType || "").startsWith("image/") || /\.(png|jpe?g|tiff?)$/i.test(file0.fileName));
+    !!file0 && (/\.(png|jpe?g)$/i.test(file0.fileName) || (!!file0.ocrSourceS3Key && !/\.tiff?$/i.test(file0.fileName)));
+  const hasRendition = !!file0?.renditionS3Key && !isPdf && !isImage;
+  // Ready, but its PDF view is still being made (or failed) → poll briefly.
+  const awaitingView = !!file0 && file0.status === "ready" && !isPdf && !isImage && !hasRendition && !/\.zip$/i.test(file0.fileName);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -66,6 +67,15 @@ export default function FilePage() {
     setLoading(true);
     Promise.resolve(load()).finally(() => setLoading(false));
   }, [load]);
+  const viewPolls = useRef(0);
+  useEffect(() => {
+    if (!awaitingView || viewPolls.current >= 20) return;
+    const t = setTimeout(() => {
+      viewPolls.current++;
+      load();
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [awaitingView, load, state]);
 
   const ensureText = useCallback(() => {
     if (docText !== null || textLoading || !id) return;
@@ -77,14 +87,14 @@ export default function FilePage() {
   }, [docText, textLoading, id]);
 
   const openFind = useCallback(() => {
-    if (isPdf || isImage) setDocView("original");
+    if (isPdf || isImage || hasRendition) setDocView("original");
     else {
       setDocView("text");
       ensureText();
     }
     setFindOpen(true);
     setTimeout(() => findRef.current?.focus(), 60);
-  }, [ensureText, isPdf, isImage]);
+  }, [ensureText, isPdf, isImage, hasRendition]);
   const closeFind = () => {
     setFindOpen(false);
     setFindQ("");
@@ -156,7 +166,7 @@ export default function FilePage() {
   }, [docText, committed, cur]);
 
   const count =
-    docView === "text" ? matchCount : isPdf ? pdfCount : isImage ? imageCount : matchCount;
+    docView === "text" ? matchCount : isPdf || hasRendition ? pdfCount : isImage ? imageCount : matchCount;
 
   // reset to the first match when a new search is committed or the view changes
   useEffect(() => {
@@ -193,6 +203,7 @@ export default function FilePage() {
     );
 
   const { file, viewUrl, tables } = state;
+  const downloadUrl = state.downloadUrl || viewUrl;
   const tags = file.tags || [];
 
   const patch = async (p: { fileName?: string; tags?: string[] }) => {
@@ -238,7 +249,7 @@ export default function FilePage() {
     const v = findQ.trim();
     setCommitted(v);
     setCur(0);
-    setSearching(!!v && (isPdf || isImage));
+    setSearching(!!v && (isPdf || isImage || hasRendition));
   };
 
   const segStyle = (on: boolean): React.CSSProperties => ({
@@ -458,14 +469,24 @@ export default function FilePage() {
                     activeIndex={cur}
                     onCount={onImageCount}
                   />
+                ) : hasRendition ? (
+                  <PdfViewer
+                    url={`/api/files/${file._id}/rendition`}
+                    fileId={file._id}
+                    query={committed}
+                    activeIndex={cur}
+                    onCount={onPdfCount}
+                  />
                 ) : (
                   <div style={{ height: "100%", display: "grid", placeItems: "center", textAlign: "center", padding: 24 }}>
                     <div>
                       <div style={{ fontSize: 32, marginBottom: 10 }}>📄</div>
                       <div className="muted" style={{ marginBottom: 12 }}>
-                        Inline preview isn't available for this file type.
+                        {awaitingView && viewPolls.current < 20
+                          ? "Preparing a preview of this document…"
+                          : "Inline preview isn't available for this file type."}
                       </div>
-                      <a className="btn" href={viewUrl} target="_blank" rel="noreferrer">
+                      <a className="btn" href={downloadUrl} target="_blank" rel="noreferrer">
                         ⬇ Download original
                       </a>
                     </div>
@@ -478,6 +499,7 @@ export default function FilePage() {
 
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
+          <RelatedDocuments detail={state} />
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-header">About</div>
             <div style={{ padding: 14 }}>

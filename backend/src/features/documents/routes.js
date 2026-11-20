@@ -96,9 +96,19 @@ router.get('/api/files/:id', async (req, res) => {
   try {
     const file = await File.findById(req.params.id).select('-rawText -tablesCsv -words');
     if (!file) return res.status(404).json({ message: 'File not found' });
-    const viewUrl = s3.getSignedUrl('getObject', { Bucket: BUCKET, Key: file.s3Key, Expires: 3600 });
-    const tables = await TableResult.find({ fileId: file._id }).sort({ createdAt: -1 });
-    res.json({ file, viewUrl, tables });
+    const sign = (Key, extra = {}) => s3.getSignedUrl('getObject', { Bucket: BUCKET, Key, Expires: 3600, ...extra });
+    // viewUrl: what the browser displays (converted JPEG for HEIC/GIF/BMP);
+    // downloadUrl: always the untouched original.
+    const viewUrl = sign(file.ocrSourceS3Key || file.s3Key);
+    const downloadUrl = sign(file.s3Key, {
+      ResponseContentDisposition: `attachment; filename="${encodeURIComponent(file.fileName || 'file')}"`,
+    });
+    const [tables, children, parent] = await Promise.all([
+      TableResult.find({ fileId: file._id }).sort({ createdAt: -1 }),
+      File.find({ parentDocumentId: file._id }).select('fileName status stage error mimeType createdAt').sort({ s3Key: 1 }).lean(),
+      file.parentDocumentId ? File.findById(file.parentDocumentId).select('fileName status').lean() : null,
+    ]);
+    res.json({ file, viewUrl, downloadUrl, tables, children, parent });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal server error' });
@@ -192,6 +202,27 @@ router.get('/api/files/:id/geometry', async (req, res) => {
 
 // Stream the raw file bytes same-origin (so pdf.js can fetch a PDF without
 // hitting S3 CORS). Used by the in-page PDF viewer.
+// The PDF view (rendition) of a non-PDF document, streamed same-origin for pdf.js.
+router.get('/api/files/:id/rendition', async (req, res) => {
+  try {
+    const file = await File.findById(req.params.id).select('renditionS3Key fileName');
+    if (!file) return res.status(404).json({ message: 'File not found' });
+    if (!file.renditionS3Key) return res.status(404).json({ message: 'No preview for this document yet' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent((file.fileName || 'file') + '.pdf')}"`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    const stream = s3.getObject({ Bucket: BUCKET, Key: file.renditionS3Key }).createReadStream();
+    stream.on('error', (e) => {
+      console.error('rendition stream error:', e && e.message);
+      if (!res.headersSent) res.status(500).end();
+    });
+    stream.pipe(res);
+  } catch (err) {
+    console.error('rendition error:', err && err.message);
+    res.status(500).json({ message: 'Could not load the preview' });
+  }
+});
+
 router.get('/api/files/:id/raw', async (req, res) => {
   try {
     const file = await File.findById(req.params.id).select('s3Key mimeType fileName');

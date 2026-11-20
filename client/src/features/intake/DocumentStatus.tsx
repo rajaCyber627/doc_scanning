@@ -14,7 +14,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 export interface StatusDoc {
   _id: string;
-  status: "processing" | "ready" | "failed";
+  status: "processing" | "ready" | "needs_review" | "failed";
   stage?: string | null;
   error?: string;
 }
@@ -37,6 +37,13 @@ export default function DocumentStatus({
     return (
       <span className="badge processing" aria-live="polite">
         <span className="dot" /> {STAGE_LABELS[doc.stage || ""] || "Processing…"}
+      </span>
+    );
+  }
+  if (doc.status === "needs_review") {
+    return (
+      <span className="badge review" title={doc.error || "A person needs to check this document"}>
+        <span className="dot" /> Needs review
       </span>
     );
   }

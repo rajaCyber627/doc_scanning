@@ -7,7 +7,7 @@ const storage = require('../../providers/storage');
 const events = require('../../core/events');
 
 async function removeDocument(file) {
-  for (const key of [file.s3Key, file.textS3Key].filter(Boolean)) {
+  for (const key of [file.s3Key, file.textS3Key, file.renditionS3Key, file.ocrSourceS3Key].filter(Boolean)) {
     try {
       await storage.deleteObject(key);
     } catch (e) {

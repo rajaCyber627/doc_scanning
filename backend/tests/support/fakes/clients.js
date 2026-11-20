@@ -103,11 +103,32 @@ const subscriptionError = () => {
   e.code = 'SubscriptionRequiredException';
   return e;
 };
+// Set textractState.mode = 'ok' in a test to simulate an activated account; every
+// object OCR'd is recorded in textractState.calls.
+const textractState = { mode: 'subscription', calls: [] };
+const okResult = (key) => ({
+  JobStatus: 'SUCCEEDED',
+  Blocks: [
+    { BlockType: 'LINE', Text: `OCR text of ${key.split('/').pop()}` },
+    { BlockType: 'WORD', Text: 'OCR', Page: 1, Geometry: { BoundingBox: { Left: 0.1, Top: 0.1, Width: 0.1, Height: 0.05 } } },
+  ],
+});
+const jobs = new Map();
+const start = (p, cb) => {
+  if (textractState.mode !== 'ok') return cb(subscriptionError());
+  const key = p.DocumentLocation.S3Object.Name;
+  if (!objects.has(key)) return cb(noSuchKey());
+  textractState.calls.push(key);
+  const JobId = `job-${jobs.size + 1}`;
+  jobs.set(JobId, key);
+  return cb(null, { JobId });
+};
+const get = (p, cb) => (textractState.mode !== 'ok' ? cb(subscriptionError()) : cb(null, okResult(jobs.get(p.JobId) || '')));
 const textract = {
-  startDocumentTextDetection: (p, cb) => cb(subscriptionError()),
-  startDocumentAnalysis: (p, cb) => cb(subscriptionError()),
-  getDocumentTextDetection: (p, cb) => cb(subscriptionError()),
-  getDocumentAnalysis: (p, cb) => cb(subscriptionError()),
+  startDocumentTextDetection: start,
+  startDocumentAnalysis: start,
+  getDocumentTextDetection: get,
+  getDocumentAnalysis: get,
 };
 
 // Anthropic: returns a fixed overview; tests can queue other replies.
@@ -132,6 +153,9 @@ function reset() {
   objects.clear();
   multiparts.clear();
   replies.length = 0;
+  jobs.clear();
+  textractState.mode = 'subscription';
+  textractState.calls.length = 0;
 }
 
 module.exports = {
@@ -143,5 +167,6 @@ module.exports = {
   __multiparts: multiparts,
   __putPart: putPart,
   __replies: replies,
+  __textract: textractState,
   __reset: reset,
 };

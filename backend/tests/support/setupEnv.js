@@ -22,5 +22,7 @@ Object.assign(process.env, {
   UPLOAD_MAX_MB: '100',
   UPLOAD_TRANSPORT: 'auto',
   TEXT_MAX_STORED_CHARS: '50000', // small so the "very long text" path is testable
+  FORMATS_MAX_ARCHIVE_ENTRIES: '50', // small so the zip limits are testable
+  SOFFICE_PATH: '/nonexistent/soffice', // tests always use the built-in text PDF view
   AWS_SDK_JS_SUPPRESS_MAINTENANCE_MODE_MESSAGE: '1',
 });

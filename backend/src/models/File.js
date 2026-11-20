@@ -25,6 +25,17 @@ const fileSchema = new mongoose.Schema(
     error: { type: String, default: '' },
 
     // ----- Capture Hub fields (all optional; existing documents keep working) -----
+    // Viewing: PDF rendition for formats browsers can't show (P05); converted JPEG for
+    // HEIC/GIF/BMP (also what OCR reads). Originals are never modified.
+    renditionS3Key: { type: String, default: null },
+    renditionMethod: { type: String, default: null }, // libreoffice | text | image
+    ocrSourceS3Key: { type: String, default: null },
+    // Containers (emails, archives): how many child documents were created / skipped
+    containerDepth: { type: Number, default: 0 },
+    childSummary: {
+      created: { type: Number, default: 0 },
+      skipped: { type: Array, default: [] }, // [{ name, reason }]
+    },
     // Full extracted text lives in S3 when it exceeds config.text.maxStoredChars
     textLength: { type: Number, default: null },
     textTruncated: { type: Boolean, default: false },

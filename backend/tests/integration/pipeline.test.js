@@ -47,7 +47,7 @@ describe('upload → pipeline → ready', () => {
     expect(f.source).toBe('upload');
     expect(f.summary).toBe('Test summary');
     expect(f.stageHistory.filter((h) => h.status === 'done').map((h) => h.stage)).toEqual([
-      'store', 'hash', 'extract', 'classify', 'index', 'handoff',
+      'store', 'hash', 'extract', 'classify', 'index', 'render', 'handoff',
     ]);
     // the original file is in storage
     expect(fakes.__objects.has(f.s3Key)).toBe(true);
