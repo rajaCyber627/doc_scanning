@@ -1,0 +1,57 @@
+[
+  {
+    "personId": "emp-1045",
+    "type": "employee",
+    "name": "John Smith",
+    "employeeId": "1045",
+    "applicantNumber": null,
+    "positionTitle": "Equipment Operator II",
+    "department": "Public Works",
+    "division": "Streets",
+    "status": "active"
+  },
+  {
+    "personId": "emp-2087",
+    "type": "employee",
+    "name": "Priya Patel",
+    "employeeId": "2087",
+    "applicantNumber": "A-26-0311",
+    "positionTitle": "HR Analyst",
+    "department": "Human Resource Management",
+    "division": "Recruitment",
+    "status": "active"
+  },
+  {
+    "personId": "emp-3310",
+    "type": "employee",
+    "name": "Carlos Rivera",
+    "employeeId": "3310",
+    "applicantNumber": null,
+    "positionTitle": "Accountant",
+    "department": "Finance",
+    "division": "Payroll",
+    "status": "active"
+  },
+  {
+    "personId": "ret-0877",
+    "type": "retiree",
+    "name": "Dorothy Hughes",
+    "employeeId": "0877",
+    "applicantNumber": null,
+    "positionTitle": "Library Assistant",
+    "department": "Libraries",
+    "division": "Main Library",
+    "status": "retired"
+  },
+  {
+    "personId": "app-26-0402",
+    "type": "applicant",
+    "name": "Marcus Lee",
+    "employeeId": null,
+    "applicantNumber": "A-26-0402",
+    "positionTitle": "Firefighter Recruit",
+    "department": "Fire, Rescue & Emergency Services",
+    "division": null,
+    "status": "applicant"
+  }
+]

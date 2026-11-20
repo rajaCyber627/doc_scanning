@@ -1,22 +1,2 @@
-const mongoose = require('mongoose');
-const schema = mongoose.Schema(
-    {
-        firstName: String,
-        lastName: String,
-        userName: String,
-        email: String,
-        password: String,
-        role: String,
-        // Email-OTP two-step verification
-        twoFactorEnabled: { type: Boolean, default: false },
-        otp: String,
-        otpExpires: Date,
-        lastTwoFactorNudge: Date,
-        // Standing instructions applied to every query (like ChatGPT custom instructions)
-        customInstructions: { type: String, default: '' },
-    },
-    {timestamps: true}
-)
-
-const User = mongoose.model('User',schema);
-module.exports = User;
+// Moved to src/models/User.js — kept so existing scripts keep working.
+module.exports = require('./src/models/User');

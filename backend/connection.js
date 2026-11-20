@@ -1,14 +1,5 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+// Kept for the one-off scripts (backfill-embeddings.js, migrate-hash-passwords.js),
+// which `await` this promise. The app itself connects via src/db.js.
+const { connect } = require('./src/db');
 
-const conParams = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}
-
-// DB connection string comes from backend/.env (MONGO_URI); falls back to a local MongoDB for dev.
-const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docp';
-
-const connection = mongoose.connect(uri, conParams).then(()=> console.log('connected')).catch((err)=> console.log(err));
-
-module.exports = connection;
+module.exports = connect().catch((err) => console.log(err));

@@ -1,0 +1,226 @@
+# Capture Hub — Shared Context
+
+Read this before every task in `docs/capture/PROMPTS.md`. It is the single source of
+truth for scope, rules and current state. Update the **Progress** section when a task
+finishes.
+
+Source: RFP #340-27-YE, City of Portsmouth (VA), *Document Management System for Human
+Resources* (issued Oct 27, 2026; proposals due Thu Dec 3, 2026, 2:00 p.m. EST).
+
+---
+
+## 1. Scope (what we build)
+
+Only the RFP section **"Document Capture and Scanning"** (RFP p. 9):
+
+| # | Feature | Prompt |
+|---|---------|--------|
+| 1 | Individual document upload | P02 |
+| 2 | Bulk document upload | P03 |
+| 3 | Drag-and-drop functionality | P04 |
+| 4 | Scanning | P13 |
+| 5 | Batch scanning | P14 |
+| 6 | Optical character recognition (OCR) | P06 |
+| 7 | Full-text indexing | P07 |
+| 8 | Email capture | P15 |
+| 9 | Electronic document import | P05 |
+| 10 | Import from shared drives | P16 |
+| 11 | Automated or assisted classification | P10 |
+| 12 | Metadata entry | P09 |
+| 13 | Document splitting | P11 |
+| 14 | Document merging | P12 |
+| 15 | Duplicate detection where available | P08 |
+| 16 | Written method for converting paper personnel records | P17 |
+
+## 2. Out of scope (owned by the partner HRDMS)
+
+The partner vendor's system is the **system of record**. It owns: security/access
+matrix, electronic personnel-file view, search UI, workflow automation, records
+retention / holds / disposition, audit-log storage, version store, reporting and
+dashboards, employee/manager self-service. **We only integrate with these.**
+
+## 3. Architecture
+
+```
+ INTAKE CHANNELS                CAPTURE HUB PIPELINE (ours)                 PARTNER HRDMS
+ ───────────────                ───────────────────────────                 ─────────────
+ Upload / bulk / drag-drop ─┐
+ Camera / scanner          ─┤   1 store original (S3, encrypted, temporary)
+ Batch scanning            ─┤   2 hash → duplicate check
+ Outlook shared mailbox    ─┼─▶ 3 extract text / OCR → searchable PDF
+ Shared drives / SharePoint─┤   4 split suggestion (multi-document files)    ──▶  push document
+ Other formats (.doc, .msg)─┘   5 classify: type, category, confidentiality,       + metadata
+                                  person, metadata (with confidence)               + audit events
+                                6 review queue (restricted queue separate)
+                                7 index → hand-off → purge our copy
+```
+
+## 4. Partner hand-off
+
+The partner's API is **not known yet**. All hand-off goes through a `PartnerAdapter`
+interface; no feature may call the partner directly.
+
+```
+PartnerAdapter
+  pushDocument(document, files, metadata, indexPayload) → partnerDocumentId
+  pushAuditEvent(event)
+  findByHash(sha256) → match | null
+  lookupPerson(query) → [{ personId, type: employee|applicant|retiree, name,
+                           employeeId, applicantNumber, positionTitle,
+                           department, division, status }]
+```
+
+`MockPartnerAdapter` is used locally: logs pushes, stores them in a local collection,
+and serves people from a seed file.
+
+## 5. Domain rules from the RFP
+
+**Record subjects:** active employees, applicants, retirees, and others HR keeps
+official records for (p. 5).
+
+**Record categories and document types (pp. 5–8):**
+
+| Category | Document types |
+|---|---|
+| 1. Personnel | employment applications and related documents; offer letters; personnel agreements; job changes; promotions; transfers; demotions; salary actions; classification actions; position changes; employee acknowledgements; separation documentation; other official personnel documents |
+| 2. Benefits | enrollment documentation; benefit elections; supporting eligibility documentation; retirement-related documentation; beneficiary information; benefit correspondence; qualifying life event documentation |
+| 3. Medical & Confidential **(restricted)** | medical certifications; medical documentation; fitness-for-duty records; return-to-work documentation; other confidential medical information |
+| 4. FMLA & Leave **(restricted)** | FMLA requests; eligibility notices; medical certifications; designation notices; leave documentation; leave tracking records; return-to-work documentation; leave-related correspondence |
+| 5. ADA & Accommodation **(restricted)** | accommodation requests; interactive-process documentation; medical documentation; accommodation decisions; related correspondence |
+| 6. Workers' Compensation **(restricted)** | incident documentation; first reports of injury; medical documentation; claim correspondence; return-to-work records; claim status documents; related reports |
+| 7. Employee Relations **(investigations & grievances restricted)** | complaints; counseling documentation; disciplinary actions; investigations; grievances; performance-related documentation; employee statements; management responses; supporting evidence; final determinations |
+| 8. Recruitment | applications; resumes; interview documentation; selection documentation; offer documentation; background-related records where permitted; recruitment correspondence |
+| 9. Classification & Compensation | classification studies; compensation analyses; salary reviews; job descriptions; position documentation; pay actions; supporting approvals |
+| 10. Training & Development | training completions; certifications; required training; career development documentation; professional development records |
+
+**Metadata fields (pp. 9–10):** employee name, employee ID, position title,
+department, division, document type, HR functional area, effective date, creation
+date, fiscal year, record category, retention category, confidentiality level,
+status, case number, applicant number, position number, other configurable fields.
+
+**Restricted records (pp. 6, 8–9):** medical, FMLA, ADA, workers' compensation,
+employee-relations investigations, grievances, other specially restricted records.
+- Medical records are kept separate from general personnel records.
+- Access to general personnel records never implies access to restricted records.
+- Users without access must not see restricted documents **or learn they exist**
+  (no counts, snippets or duplicate details) — p. 10.
+- Least-privilege access throughout.
+
+**Integrity rules:**
+- Splitting/merging preserves originals (version control, p. 14).
+- Every capture action emits an audit event: user, action, document, date, time
+  (pp. 13–14). Audit events are not editable by standard users.
+- A merge never lowers confidentiality: the result takes the strictest level.
+
+**AI rules (pp. 17–18):** AI features must be disclosed, optional (admin off switch,
+everything works without them), human-reviewed, accuracy-tracked and audited. City
+data must not be used to train models.
+
+**City environment (pp. 14–15):** Microsoft 365, Outlook, Teams, SharePoint, Microsoft
+Entra ID / Active Directory.
+
+## 6. Current state of DocP
+
+**Since P01** the backend is modular (Express + Mongoose):
+
+```
+backend/app.js            entry: connect DB → recoverStuck() → listen
+backend/src/app.js        createApp() — mounts routers (used by tests, no DB/listen)
+backend/src/config/       env + model IDs (config.models.main / .fast) + pipeline settings
+backend/src/clients/      s3, textract, anthropic, BUCKET  (tests swap in tests/fakes/clients.js)
+backend/src/models/       File, Folder, User, TableResult, SavedPrompt, Chunk, Batch, AuditEvent, MockPartnerRecord
+backend/src/services/     extraction, ocr (Textract), ai (Claude), embeddings (Voyage), storage
+backend/src/pipeline/     stages.js (store → hash → extract → classify → [ready] → index → handoff),
+                          runner.js (retries, resume, stageHistory), queue.js (in-process), errors.js (humanizeError)
+backend/src/audit/        emitAudit({ userId, action, documentId, details }) — append-only, forwarded to partner
+backend/src/partner/      PartnerAdapter, MockPartnerAdapter, seed-people.json (getPartner())
+backend/src/routes/       auth, prompts, files, search, tables, folders, query (same /api paths as before)
+backend/tests/            Jest + supertest + mongodb-memory-server; `npm test`
+```
+Root `File.js`, `userModel.js`, `connection.js` etc. are one-line shims for the old scripts.
+Pipeline stages: blocking stages must pass before `status: 'ready'`; non-blocking failures are
+audited (`pipeline.stage_failed`) but don't fail the document. Non-retryable errors (e.g.
+`OCR_NOT_ACTIVATED`) fail on the first attempt with a readable `error` + `errorCode`.
+Audit actions so far: `document.uploaded`, `document.ready`, `document.updated`,
+`document.deleted`, `folder.deleted`, `pipeline.failed`, `pipeline.stage_failed`.
+
+Original pre-P01 references (line numbers now refer to the old file, kept for history):
+
+| Area | Where | Notes |
+|---|---|---|
+| AWS clients | `backend/app.js:34-52` | S3, Textract (v2 SDK, end-of-support), Anthropic |
+| Upload route | `backend/app.js:624` `POST /api/files` | multer in-memory, `upload.array('files', 20)`; multi-file request creates a Folder |
+| Upload size limit | `backend/app.js:439` | multer 25 MB; Vercel proxy limits real uploads to ~4.5 MB |
+| Client upload | `client/src/api.ts:113` `uploadOne` | one file per request |
+| Extraction | `backend/app.js:276` `extractContent` | docx → mammoth; txt/md/csv → raw; PDF text layer if ≥100 chars/page; else Textract |
+| OCR | `backend/app.js:233` `runTextractMode`, `:253` `runTextract` | DetectDocumentText, falls back to AnalyzeDocument TABLES on AccessDenied |
+| OCR gaps | `backend/app.js:242`, `:223` | word geometry capped at 8,000 words; `blocksToTablesCsv` unused (tables discarded); confidence ignored |
+| Processing | `backend/app.js:317` `processFile` | fire-and-forget after upload: extract → overview (Claude) → status `ready`/`failed` → embed |
+| Search | `backend/app.js:690` `GET /api/search` | regex scan of `rawText` |
+| File model | `backend/File.js` | userId, folderId, fileName, s3Key, mimeType, status (processing/ready/failed), rawText, tablesCsv, summary, keyFacts, suggestedQuestions, tags, words, error |
+| Folder model | `backend/Folder.js` | userId, name |
+| User model | `backend/userModel.js` | name, userName, email, password (bcrypt), role (unused), 2FA, customInstructions |
+| Accepted types | `client/src/pages/Documents.tsx:146,264`, `client/src/pages/FolderPage.tsx:118` | duplicated list: pdf, png, jpg, jpeg, tif, tiff, docx, txt, md, csv |
+| Auth | — | no tokens; client stores user in localStorage and sends `userId` |
+| Tests | — | none |
+
+## 7. Known environment limits
+
+- **AWS Textract is not activated** on the dev AWS account (`SubscriptionRequiredException`).
+  Images and scanned PDFs fail until it is activated. Build OCR behind an interface
+  with a fixture provider so it is testable without Textract.
+- **Local MongoDB** (`127.0.0.1:27017/docp`) has **no Atlas Vector Search**.
+- S3 bucket `cybernirvana-docs-dev` (us-east-1): upload/read/delete work; the dev IAM
+  user cannot call `s3:GetBucketLocation` (not needed).
+- AWS SDK v2 is end-of-support; migrating to v3 is acceptable when touching that code.
+
+## 8. Known bugs
+
+- ~~Login without username matched the first user~~ — **fixed in P01** (400 when missing);
+  the same pattern in sign-up (missing userName collided with every user) also fixed.
+- **Opaque failures:** failed uploads show only "Failed"
+  (`client/src/pages/Documents.tsx:244`) although a readable error is now stored on the
+  File (`error`, `errorCode`). Show it in the UI in P02.
+- **No real authorization yet:** routes trust `userId` from the request, and
+  `GET /api/files`, `/api/tables`, `/api/folders`, `/api/prompts` return **all users' data
+  when `userId` is omitted**. Addressed with Entra ID SSO + roles (supporting work, not P01).
+
+## 9. Working rules (every task)
+
+1. Read this file and the relevant code before changing anything.
+2. For non-trivial tasks, present a short plan (files, data changes, risks) and
+   **wait for approval** before editing.
+3. Keep existing features working. No unrelated refactors.
+4. New backend logic goes in modules under `backend/src/` (created in P01), not in
+   `app.js`.
+5. Add or update tests for new logic; run them and report results honestly,
+   including failures.
+6. Every capture action emits an audit event; respect the restricted-record rules
+   in §5 in every API response and UI.
+7. External services (partner, Textract, LLM, Microsoft Graph) are always behind an
+   interface with a local mock/fixture implementation.
+8. Never commit. Never print secrets from `backend/.env`. Keep `MONGO_URI` pointed at
+   a local or dev database — never the live one.
+9. Finish with: summary of changes, how to test manually, open questions, and an
+   update to **Progress** below.
+
+## 10. Progress
+
+- [x] P00 Shared context file
+- [x] P01 Pipeline foundation & test harness (29 tests passing; live end-to-end run unchanged)
+- [ ] P02 Individual upload (direct-to-S3)
+- [ ] P03 Bulk upload & batches
+- [ ] P04 Drag-and-drop
+- [ ] P05 Electronic document import
+- [ ] P06 OCR
+- [ ] P07 Full-text indexing
+- [ ] P08 Duplicate detection
+- [ ] P09 Metadata entry
+- [ ] P10 Automated / assisted classification
+- [ ] P11 Document splitting
+- [ ] P12 Document merging
+- [ ] P13 Scanning
+- [ ] P14 Batch scanning
+- [ ] P15 Email capture
+- [ ] P16 Import from shared drives
+- [ ] P17 Paper conversion method (document)
