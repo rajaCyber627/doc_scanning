@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { UploadItem } from "./useUploads";
 
 const fmtSize = (b: number) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
@@ -25,10 +26,11 @@ interface Props {
   onRetry: (id: string) => void;
   onDismiss: (id: string) => void;
   onClear: () => void;
+  footer?: ReactNode; // e.g. a link to the batch page
 }
 
 /** Bottom-right panel listing uploads with progress, errors, cancel and retry. */
-export default function UploadTray({ items, onCancel, onRetry, onDismiss, onClear }: Props) {
+export default function UploadTray({ items, onCancel, onRetry, onDismiss, onClear, footer }: Props) {
   if (!items.length) return null;
   const active = items.filter((i) => ["queued", "uploading", "verifying"].includes(i.phase)).length;
   return (
@@ -88,6 +90,7 @@ export default function UploadTray({ items, onCancel, onRetry, onDismiss, onClea
           </div>
         ))}
       </div>
+      {footer && <div className="upload-tray-footer">{footer}</div>}
     </div>
   );
 }

@@ -645,3 +645,27 @@ mark.pdfhl.current {
     display: none;
   }
 }
+
+/* --- batches (P03) --- */
+.badge.review {
+  color: var(--attention);
+  border-color: rgba(210, 153, 34, 0.4);
+}
+.upload-tray-footer {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-muted);
+  font-size: 13px;
+}
+.batch-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.batch-stat {
+  padding: 12px 14px;
+}
+.batch-stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}

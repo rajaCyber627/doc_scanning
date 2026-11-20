@@ -9,6 +9,8 @@ const { emitAudit } = require('../../core/audit');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
 const Folder = require('../../models/Folder');
+const Batch = require('../../models/Batch');
+const events = require('../../core/events');
 const User = require('../../models/User');
 const UploadSession = require('./UploadSession.model');
 const { typeForName, contentMatches, publicTypes } = require('./fileTypes');
@@ -25,6 +27,7 @@ class UploadError extends Error {
 const MB = 1024 * 1024;
 const fmtMB = (b) => `${Math.round((b / MB) * 10) / 10} MB`;
 const isId = (v) => !!v && mongoose.isValidObjectId(v);
+const touchBatch = (batchId) => batchId && events.emit('batch.touch', String(batchId));
 const safeKeyName = (name) => String(name).replace(/[^\w.\- ]+/g, '_').slice(-150);
 
 function uploadConfig() {
@@ -56,7 +59,7 @@ async function loadOwnedSession(sessionId, userId) {
 }
 
 /** Step 1: validate the file and return where the browser should send the bytes. */
-async function createSession({ userId, fileName, sizeBytes, folderId, batchId, hints, transport }) {
+async function createSession({ userId, fileName, sizeBytes, folderId, batchId, batchItem, hints, transport }) {
   if (!isId(userId) || !(await User.exists({ _id: userId })))
     throw new UploadError(400, 'A valid userId is required', 'BAD_USER');
   const name = String(fileName || '').trim();
@@ -79,6 +82,19 @@ async function createSession({ userId, fileName, sizeBytes, folderId, batchId, h
       throw new UploadError(404, 'Folder not found', 'BAD_FOLDER');
   }
 
+  let item = null;
+  if (batchId) {
+    if (!isId(batchId)) throw new UploadError(400, 'Invalid batchId', 'BAD_BATCH');
+    const batch = await Batch.findById(batchId).select('createdBy items').lean();
+    if (!batch || String(batch.createdBy) !== String(userId)) throw new UploadError(404, 'Batch not found', 'BAD_BATCH');
+    if (batchItem !== undefined && batchItem !== null) {
+      item = Number(batchItem);
+      if (!Number.isInteger(item) || item < 0 || item >= batch.items.length)
+        throw new UploadError(400, 'Invalid batch item', 'BAD_BATCH_ITEM');
+      if (batch.items[item].cancelled) throw new UploadError(409, 'This file was cancelled from the batch', 'ITEM_CANCELLED');
+    }
+  }
+
   const chosen = pickTransport(transport);
   const rand = crypto.randomBytes(4).toString('hex');
   const s3Key = `${userId}/${folderId ? `${folderId}/` : ''}${Date.now()}-${rand}-${safeKeyName(name)}`;
@@ -94,8 +110,8 @@ async function createSession({ userId, fileName, sizeBytes, folderId, batchId, h
     s3Key,
     transport: chosen,
     folderId: folderId || null,
-    batchId: isId(batchId) ? batchId : null,
-    hints: hints && typeof hints === 'object' ? hints : {},
+    batchId: batchId || null,
+    hints: { ...(hints && typeof hints === 'object' ? hints : {}), ...(item !== null ? { batchItem: item } : {}) },
     expiresAt,
   });
 
@@ -162,6 +178,7 @@ async function failSession(s, message, code) {
     action: 'upload.failed',
     details: { uploadId: String(s._id), fileName: s.fileName, code, error: message },
   });
+  touchBatch(s.batchId);
   return new UploadError(422, message, code);
 }
 
@@ -208,6 +225,7 @@ async function completeSession(sessionId, { userId, parts }) {
     userId: s.userId,
     folderId: s.folderId,
     batchId: s.batchId,
+    batchItem: Number.isInteger(hints.batchItem) ? hints.batchItem : null,
     fileName: s.fileName,
     s3Key: s.s3Key,
     mimeType: s.mimeType,
@@ -232,6 +250,7 @@ async function completeSession(sessionId, { userId, parts }) {
     details: { uploadId: String(s._id), fileName: s.fileName, sizeBytes: s.sizeBytes, transport: s.transport },
   });
   enqueueDocument(file._id);
+  touchBatch(s.batchId);
   return File.findById(file._id).select('-rawText -tablesCsv -words');
 }
 
@@ -250,6 +269,7 @@ async function abortSession(sessionId, { userId, reason }) {
     action: 'upload.failed',
     details: { uploadId: String(s._id), fileName: s.fileName, code: 'ABORTED', error: s.error },
   });
+  touchBatch(s.batchId);
   return { status: 'aborted' };
 }
 

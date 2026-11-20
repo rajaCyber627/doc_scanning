@@ -18,11 +18,30 @@ class NetworkBlocked extends Error {}
 
 const PROXY_FLAG = "docp.uploadTransport";
 const PART_CONCURRENCY = 3;
+const PART_ATTEMPTS = 3;
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Retry a part a few times (flaky networks); cancellation is never retried. */
+async function withRetry<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  let last: unknown;
+  for (let attempt = 1; attempt <= PART_ATTEMPTS; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      if (e instanceof UploadCancelled || signal?.aborted || attempt === PART_ATTEMPTS) break;
+      await wait(1000 * attempt);
+    }
+  }
+  throw last;
+}
 
 export interface UploadOptions {
   userId: string;
   folderId?: string;
   batchId?: string;
+  batchItem?: number;
   hints?: Record<string, string>;
   onProgress?: (fraction: number) => void;
   onPhase?: (phase: "uploading" | "verifying") => void;
@@ -115,14 +134,18 @@ async function sendBytes(file: File, t: UploadTarget, opts: UploadOptions, proxy
     while (queue.length) {
       const p = queue.shift()!;
       const blob = file.slice((p.partNumber - 1) * partSizeBytes, p.partNumber * partSizeBytes);
-      const etag = await put(
-        p.url,
-        blob,
-        {},
-        (n) => {
-          loaded.set(p.partNumber, n);
-          report(Array.from(loaded.values()).reduce((a, b) => a + b, 0));
-        },
+      const etag = await withRetry(
+        () =>
+          put(
+            p.url,
+            blob,
+            {},
+            (n) => {
+              loaded.set(p.partNumber, n);
+              report(Array.from(loaded.values()).reduce((a, b) => a + b, 0));
+            },
+            opts.signal
+          ),
         opts.signal
       );
       if (!etag) throw new Error("Storage did not return the part checksum (ETag). Ask IT to expose the ETag header in the bucket CORS settings.");
@@ -148,6 +171,7 @@ export async function uploadFile(file: File, opts: UploadOptions) {
         sizeBytes: file.size,
         folderId: opts.folderId,
         batchId: opts.batchId,
+        batchItem: opts.batchItem,
         hints: opts.hints,
         transport,
       });

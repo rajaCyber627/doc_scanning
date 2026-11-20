@@ -8,14 +8,22 @@ export interface UploadItem {
   id: string;
   file: File;
   folderId?: string;
+  batchId?: string;
+  batchItem?: number;
   progress: number; // 0..1
   phase: UploadPhase;
   error?: string;
   fileId?: string;
 }
 
-const CONCURRENCY = 2;
 let seq = 0;
+
+export interface EnqueueTarget {
+  folderId?: string;
+  batchId?: string;
+  /** Batch item index for each file (same order as the files). */
+  batchItems?: number[];
+}
 
 /**
  * Upload queue shared by the pages: per-file progress, cancel, retry.
@@ -24,7 +32,7 @@ let seq = 0;
  * The list lives in a ref (source of truth) mirrored into state for rendering, so
  * uploads are started exactly once even under React StrictMode.
  */
-export function useUploads(userId: string, onUploaded?: () => void) {
+export function useUploads(userId: string, onUploaded?: () => void, { concurrency = 4 }: { concurrency?: number } = {}) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const itemsRef = useRef<UploadItem[]>([]);
   const controllers = useRef(new Map<string, AbortController>());
@@ -44,7 +52,7 @@ export function useUploads(userId: string, onUploaded?: () => void) {
   );
 
   const startNext = useCallback(() => {
-    const free = CONCURRENCY - running.current;
+    const free = concurrency - running.current;
     if (free <= 0) return;
     const toStart = itemsRef.current.filter((it) => it.phase === "queued").slice(0, free);
     if (!toStart.length) return;
@@ -58,6 +66,8 @@ export function useUploads(userId: string, onUploaded?: () => void) {
       uploadFile(it.file, {
         userId,
         folderId: it.folderId,
+        batchId: it.batchId,
+        batchItem: it.batchItem,
         signal: ctrl.signal,
         onProgress: (progress) => patch(it.id, { progress }),
         onPhase: (phase) => patch(it.id, { phase }),
@@ -76,11 +86,12 @@ export function useUploads(userId: string, onUploaded?: () => void) {
           startNext();
         });
     });
-  }, [userId, patch, commit]);
+  }, [userId, patch, commit, concurrency]);
 
   /** Add files; invalid ones are listed as failed right away with the reason. */
   const enqueue = useCallback(
-    async (files: File[], folderId?: string) => {
+    async (files: File[], target?: string | EnqueueTarget) => {
+      const t: EnqueueTarget = typeof target === "string" ? { folderId: target } : target || {};
       if (!files.length) return;
       let cfg: UploadConfig | null = null;
       try {
@@ -88,12 +99,14 @@ export function useUploads(userId: string, onUploaded?: () => void) {
       } catch {
         /* server unreachable: each upload will report it */
       }
-      const added: UploadItem[] = files.map((file) => {
+      const added: UploadItem[] = files.map((file, i) => {
         const invalid = cfg ? validateFile(file, cfg) : null;
         return {
           id: `u${++seq}`,
           file,
-          folderId,
+          folderId: t.folderId,
+          batchId: t.batchId,
+          batchItem: t.batchItems ? t.batchItems[i] : undefined,
           progress: 0,
           phase: invalid ? "failed" : "queued",
           error: invalid || undefined,

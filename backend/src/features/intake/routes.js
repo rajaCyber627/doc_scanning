@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const File = require('../../models/File');
 const { emitAudit } = require('../../core/audit');
 const { enqueueDocument } = require('./pipeline');
+const events = require('../../core/events');
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ router.post('/api/files/:id/retry', async (req, res) => {
     }
     await emitAudit({ userId: req.body?.userId || file.userId, action: 'pipeline.retried', documentId: file._id });
     enqueueDocument(file._id);
+    if (file.batchId) events.emit('batch.touch', String(file.batchId));
     res.json({ file });
   } catch (err) {
     console.error('retry error:', err && err.message);

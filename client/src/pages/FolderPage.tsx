@@ -9,7 +9,8 @@ import LoadingMessages from "../components/LoadingMessages";
 import { getUser } from "../auth";
 import { useUploads } from "../features/upload/useUploads";
 import UploadTray from "../features/upload/UploadTray";
-import { getUploadConfig } from "../features/upload/uploadApi";
+import { getUploadConfig, errorMessage } from "../features/upload/uploadApi";
+import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
 import {
   getFolder,
@@ -36,6 +37,7 @@ export default function FolderPage() {
   const user = getUser()!;
   const addRef = useRef<HTMLInputElement>(null);
   const [accept, setAccept] = useState<string | undefined>(undefined);
+  const [lastBatch, setLastBatch] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -63,7 +65,13 @@ export default function FolderPage() {
     const picked = Array.from(e.target.files || []);
     e.target.value = "";
     if (!picked.length || !id) return;
-    uploads.enqueue(picked, id);
+    if (picked.length === 1) {
+      uploads.enqueue(picked, id);
+      return;
+    }
+    startBatchUpload(uploads.enqueue, user._id, picked, { folderId: id })
+      .then((b) => b && setLastBatch(b._id))
+      .catch((err) => message.error(errorMessage(err, "Could not start the upload")));
   };
 
   if (loading || !state)
@@ -202,6 +210,13 @@ export default function FolderPage() {
         onRetry={uploads.retry}
         onDismiss={uploads.dismiss}
         onClear={uploads.clearFinished}
+        footer={
+          lastBatch && (
+            <a href={`/batches/${lastBatch}`} onClick={(e) => { e.preventDefault(); nav(`/batches/${lastBatch}`); }}>
+              View batch progress →
+            </a>
+          )
+        }
       />
 
       {modal && (

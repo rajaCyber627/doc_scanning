@@ -233,7 +233,12 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   client `features/upload` (queue, tray, progress) + `features/intake/DocumentStatus`;
   long text capped on the record with full text in S3. See `docs/capture/uploads.md`.
   Bucket CORS for browser uploads is NOT set yet (client falls back to proxy).
-- [ ] P03 Bulk upload & batches
+- [x] P03 Bulk upload & batches — `features/batches` (Batch records the selected-file list up
+  front → unfinished files survive a refresh; per-item state; close/complete via
+  `core/events` 'batch.touch'; retry failed; cancel unfinished; CSV report with formula
+  neutralising), client Batches + Batch pages, folder upload, 4 concurrent uploads, part
+  retries. File status gains `needs_review` (set by later stages). Batch ≠ folder: batch is
+  intake tracking, folder is organization.
 - [ ] P04 Drag-and-drop
 - [ ] P05 Electronic document import
 - [ ] P06 OCR

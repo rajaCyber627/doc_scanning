@@ -47,6 +47,7 @@ export const createUpload = (body: {
   sizeBytes: number;
   folderId?: string;
   batchId?: string;
+  batchItem?: number;
   transport?: "direct" | "proxy";
   hints?: Record<string, string>;
 }) => axios.post("/api/uploads", body).then((r) => r.data as UploadTarget);

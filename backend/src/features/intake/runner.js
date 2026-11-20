@@ -6,6 +6,9 @@ const { s3GetBuffer } = require('../../providers/storage');
 const { emitAudit } = require('../../core/audit');
 const { humanizeError } = require('../../core/errors');
 const { STAGES } = require('./stages');
+const events = require('../../core/events');
+
+const touchBatch = (file) => file && file.batchId && events.emit('batch.touch', String(file.batchId));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const backoffMs = (attempt) => config.pipeline.backoffBaseMs * 4 ** (attempt - 1);
@@ -58,6 +61,7 @@ async function runPipeline(fileId, { buffer = null, stages = STAGES } = {}) {
         documentId: file._id,
         details: { stage: stage.name, code: result.error.code, error: result.error.message },
       });
+      touchBatch(file);
       return 'failed';
     }
   }
@@ -75,6 +79,7 @@ async function markReady(file) {
   );
   if (updated) {
     await emitAudit({ userId: updated.userId, action: 'document.ready', documentId: updated._id });
+    touchBatch(updated);
   }
   return updated;
 }

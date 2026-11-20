@@ -10,6 +10,8 @@ import FilePage from "./pages/FilePage";
 import FolderPage from "./pages/FolderPage";
 import TablePage from "./pages/TablePage";
 import AskPage from "./pages/AskPage";
+import BatchesPage from "./features/batches/BatchesPage";
+import BatchPage from "./features/batches/BatchPage";
 import { isAuthed } from "./auth";
 
 function Protected({ children }: { children: JSX.Element }) {
@@ -34,6 +36,8 @@ export default function App() {
         <Route path="/tables/:id" element={<Protected><TablePage /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
         <Route path="/files/:id" element={<Protected><FilePage /></Protected>} />
+        <Route path="/batches" element={<Protected><BatchesPage /></Protected>} />
+        <Route path="/batches/:id" element={<Protected><BatchPage /></Protected>} />
         <Route path="/folders/:id" element={<Protected><FolderPage /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

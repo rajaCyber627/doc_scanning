@@ -11,7 +11,9 @@ const fileSchema = new mongoose.Schema(
     s3Key: { type: String, required: true },
     mimeType: { type: String, default: '' },
     // processing -> ready | failed
-    status: { type: String, enum: ['processing', 'ready', 'failed'], default: 'processing' },
+    // needs_review: processed, but a person must check it (OCR quality, duplicates,
+    // classification — set by later stages)
+    status: { type: String, enum: ['processing', 'ready', 'needs_review', 'failed'], default: 'processing' },
     rawText: { type: String, default: '' },
     tablesCsv: { type: String, default: '' },
     summary: { type: String, default: '' },
@@ -36,6 +38,7 @@ const fileSchema = new mongoose.Schema(
       default: 'upload',
     },
     batchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch', default: null, index: true },
+    batchItem: { type: Number, default: null }, // index into Batch.items
     // Standard HR metadata (P09) and AI suggestions (P10)
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     classification: { type: mongoose.Schema.Types.Mixed, default: {} },

@@ -9,7 +9,8 @@ import LoadingMessages from "../components/LoadingMessages";
 import { getUser } from "../auth";
 import { useUploads } from "../features/upload/useUploads";
 import UploadTray from "../features/upload/UploadTray";
-import { getUploadConfig, UploadConfig } from "../features/upload/uploadApi";
+import { getUploadConfig, UploadConfig, errorMessage } from "../features/upload/uploadApi";
+import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
 import {
   listFiles,
@@ -86,6 +87,17 @@ export default function Documents() {
     [uploads.enqueue]
   );
 
+  // Several files are uploaded as one tracked batch (progress, retry, report).
+  const [lastBatch, setLastBatch] = useState<{ id: string; name: string } | null>(null);
+  const uploadAsBatch = async (files: File[], opts: { name?: string; folderId?: string }) => {
+    try {
+      const batch = await startBatchUpload(uploads.enqueue, user._id, files, opts);
+      if (batch) setLastBatch({ id: batch._id, name: batch.name });
+    } catch (e) {
+      message.error(errorMessage(e, "Could not start the upload"));
+    }
+  };
+
   // Main dropzone / Upload button: one file → root; several → ask whether to
   // make a set or drop them all at root.
   const beginUpload = (list: File[]) => {
@@ -100,16 +112,17 @@ export default function Documents() {
     setSetName("");
     try {
       const folder = await createFolder(user._id, name);
-      pushFiles(files, folder._id);
+      await uploadAsBatch(files, { name: name || undefined, folderId: folder._id });
     } catch {
       message.error("Could not create the set");
     }
   };
   const uploadToRoot = () => {
     const files = pending || [];
+    const name = setName.trim();
     setPending(null);
     setSetName("");
-    pushFiles(files);
+    uploadAsBatch(files, { name: name || undefined });
   };
 
   // Hidden picker used by a folder's "Add" button to upload into that set.
@@ -122,7 +135,21 @@ export default function Documents() {
   const onAddPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
-    if (files.length && pendingFolder.current) pushFiles(files, pendingFolder.current);
+    if (!files.length || !pendingFolder.current) return;
+    if (files.length > 1) uploadAsBatch(files, { folderId: pendingFolder.current });
+    else pushFiles(files, pendingFolder.current);
+  };
+
+  // "Upload folder": the browser's directory picker (keeps each file's relative path).
+  const dirRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    dirRef.current?.setAttribute("webkitdirectory", "");
+    dirRef.current?.setAttribute("directory", "");
+  }, []);
+  const onDirPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (files.length) setPending(files);
   };
 
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
@@ -239,9 +266,15 @@ export default function Documents() {
               Drop files anywhere · one file → root · multiple → a new set · up to {maxMB} MB each
             </span>
           </div>
-          <button className="btn btn-primary" onClick={open}>
-            {uploads.busy ? "＋ Upload more" : "＋ Upload files"}
-          </button>
+          <span style={{ display: "flex", gap: 8 }}>
+            <input ref={dirRef} type="file" multiple hidden onChange={onDirPicked} />
+            <button className="btn" onClick={() => dirRef.current?.click()} title="Upload every file in a folder">
+              ＋ Upload folder
+            </button>
+            <button className="btn btn-primary" onClick={open}>
+              {uploads.busy ? "＋ Upload more" : "＋ Upload files"}
+            </button>
+          </span>
         </div>
 
         <div className="card" style={{ display: "flex", gap: 8, padding: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
@@ -379,6 +412,13 @@ export default function Documents() {
         onRetry={uploads.retry}
         onDismiss={uploads.dismiss}
         onClear={uploads.clearFinished}
+        footer={
+          lastBatch && (
+            <a href={`/batches/${lastBatch.id}`} onClick={(e) => { e.preventDefault(); nav(`/batches/${lastBatch.id}`); }}>
+              View batch progress →
+            </a>
+          )
+        }
       />
 
       {pending && (
@@ -390,9 +430,9 @@ export default function Documents() {
           style={{ position: "fixed", inset: 0, background: "rgba(1,4,9,0.7)", zIndex: 100, display: "grid", placeItems: "center", padding: 24 }}
         >
           <div className="card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, width: "100%" }}>
-            <div className="card-header">Upload {pending.length} files</div>
+            <div className="card-header">Upload {pending.length} files as a batch</div>
             <div style={{ padding: 16 }}>
-              <label>Set name (optional)</label>
+              <label>Name (optional)</label>
               <input
                 autoFocus
                 value={setName}
@@ -402,7 +442,7 @@ export default function Documents() {
                 style={{ marginTop: 4, marginBottom: 6 }}
               />
               <div className="faint" style={{ fontSize: 12, marginBottom: 14 }}>
-                Group them into a set, or skip and add them all to the root.
+                Group them into a set, or add them to the root. Either way the upload is tracked as a batch (see Batches).
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 <button className="btn btn-primary" onClick={createSet}>
