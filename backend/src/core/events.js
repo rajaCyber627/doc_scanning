@@ -1,6 +1,7 @@
 // In-process domain events, so features can react to each other without importing
 // each other. Listeners run asynchronously and must not throw (errors are logged).
-//   'batch.touch'  (batchId)   something in a batch changed → recompute its status
+//   'batch.touch'       (batchId)  something in a batch changed → recompute its status
+//   'document.changed'  (fileId)   a document's text/metadata/status changed → re-index + re-sync
 const { EventEmitter } = require('events');
 
 const bus = new EventEmitter();

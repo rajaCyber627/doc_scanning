@@ -7,6 +7,8 @@ const schema = mongoose.Schema(
         email: String,
         password: String,
         role: String,
+        // Extra rights (until SSO + roles): e.g. "restricted" = may see medical/FMLA/ADA/WC/ER records
+        permissions: { type: [String], default: [] },
         // Email-OTP two-step verification
         twoFactorEnabled: { type: Boolean, default: false },
         otp: String,

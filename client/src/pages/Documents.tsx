@@ -11,6 +11,7 @@ import UploadTray from "../features/upload/UploadTray";
 import { getUploadConfig, UploadConfig, errorMessage } from "../features/upload/uploadApi";
 import { startBatchUpload } from "../features/batches/startBatchUpload";
 import DocumentStatus from "../features/intake/DocumentStatus";
+import Highlighted from "../features/search/Highlighted";
 import DropZone, { BrowseButtons, DropTargetInfo, useDropTarget, useDropZone } from "../features/upload/DropZone";
 import {
   listFiles,
@@ -241,7 +242,7 @@ export default function Documents() {
         </div>
 
         <div className="card" style={{ display: "flex", gap: 8, padding: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <input placeholder={mode === "content" ? "Search inside all documents…" : "Search files…"} value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 260, height: 30 }} />
+          <input placeholder={mode === "content" ? 'Search inside documents — try "exact phrase" or -exclude' : "Search files…"} value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 260, height: 30 }} />
           <div style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: 6, overflow: "hidden" }}>
             <button className="btn btn-sm" style={{ border: "none", borderRadius: 0, background: mode === "names" ? "var(--overlay)" : "transparent" }} onClick={() => setMode("names")}>
               Names
@@ -287,12 +288,13 @@ export default function Documents() {
                       {h.fileName}
                     </div>
                     {h.snippet && (
-                      <div className="faint" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {h.snippet}
+                      <div className="faint search-snippet">
+                        <Highlighted text={h.snippet} ranges={h.highlights} />
                       </div>
                     )}
                   </div>
-                  {h.count > 0 && <span className="label">{h.count} hits</span>}
+                  {h.page ? <span className="label">page {h.page}</span> : null}
+                  {h.count > 0 && <span className="label">{h.count} hit{h.count === 1 ? "" : "s"}</span>}
                 </div>
               ))}
             </div>

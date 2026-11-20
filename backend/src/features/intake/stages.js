@@ -11,6 +11,7 @@ const storage = require('../../providers/storage');
 const { createChildren } = require('../documents/children');
 const { buildRendition } = require('../documents/rendition');
 const OcrPage = require('../ocr/OcrPage.model');
+const { indexDocument, syncToPartner } = require('../search/indexer');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -87,8 +88,9 @@ const STAGES = [
   {
     name: 'index',
     blocking: false,
-    // Semantic-search embeddings (best effort, as before). Full-text indexing: P07.
+    // Full-text index record (SearchDoc), then semantic-search embeddings (best effort).
     async run(ctx) {
+      await indexDocument(ctx.file._id);
       await embedFile(ctx.file);
     },
   },
@@ -112,8 +114,10 @@ const STAGES = [
   {
     name: 'handoff',
     blocking: false,
-    // Push to the partner HRDMS via PartnerAdapter — implemented in P07.
-    async run() {},
+    // Send to the partner HRDMS (ready documents only; reviewed ones follow on review).
+    async run(ctx) {
+      await syncToPartner(ctx.file._id);
+    },
   },
 ];
 

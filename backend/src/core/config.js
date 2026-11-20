@@ -67,6 +67,10 @@ module.exports = {
     skewDegrees: Number(env.OCR_SKEW_DEGREES || 3), // tilt worth flagging / straightening
   },
 
+  search: {
+    provider: ['mongo', 'atlas'].includes(env.SEARCH_PROVIDER) ? env.SEARCH_PROVIDER : 'mongo',
+  },
+
   upload: {
     maxBytes: int(env.UPLOAD_MAX_MB, 100) * 1024 * 1024,
     // Files above this go to S3 as multipart (parallel parts, resumable per part).

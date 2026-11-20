@@ -33,6 +33,8 @@ const fileSchema = new mongoose.Schema(
     resolvedReviewReasons: { type: Array, default: [] }, // history: reason + resolvedAt/By
     reviewedAt: { type: Date, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    // Partner hand-off (P07): set once the partner HRDMS has accepted the document
+    handoff: { type: mongoose.Schema.Types.Mixed, default: null }, // { partnerDocumentId, schemaVersion, syncedAt }
     // Viewing: PDF rendition for formats browsers can't show (P05); converted JPEG for
     // HEIC/GIF/BMP (also what OCR reads). Originals are never modified.
     renditionS3Key: { type: String, default: null },

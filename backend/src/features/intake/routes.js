@@ -59,6 +59,7 @@ router.post('/api/files/:id/review', async (req, res) => {
       details: { reasons: current.reviewReasons.map((r) => r.code), note: String(req.body?.note || '').slice(0, 500) },
     });
     if (current.batchId) events.emit('batch.touch', String(current.batchId));
+    events.emit('document.changed', String(current._id)); // re-index, and hand off now that it is accepted
     res.json({ file });
   } catch (err) {
     console.error('review error:', err && err.message);

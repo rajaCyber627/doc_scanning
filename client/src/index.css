@@ -780,3 +780,19 @@ input[type="checkbox"]:focus-visible {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+
+/* --- search (P07) --- */
+.search-snippet {
+  font-size: 12px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.search-snippet mark {
+  background: rgba(210, 153, 34, 0.35);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}

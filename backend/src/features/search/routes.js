@@ -1,45 +1,33 @@
+// Full-text search over processed documents (P07).
+// GET /api/search?userId=&q=&batchId=&folderId=&status=&documentType=&from=&to=&limit=
+//   q supports words (stemmed), "exact phrases" and -excluded words.
+// Restricted documents are left out — and not counted — for users without permission.
 const express = require('express');
-const router = express.Router();
-const File = require('../../models/File');
+const mongoose = require('mongoose');
+const { viewerFor } = require('../../core/access');
+const { getSearchProvider } = require('../../providers/search');
 
-// Keyword content search across all of a user's documents (name + full text)
+const router = express.Router();
+const id = (v) => (v && mongoose.isValidObjectId(v) ? v : undefined);
+const date = (v) => (v && !Number.isNaN(Date.parse(v)) ? v : undefined);
+
 router.get('/api/search', async (req, res) => {
   try {
-    const { userId, q } = req.query;
-    const needle = String(q || '').trim().toLowerCase();
-    if (!needle) return res.json({ results: [] });
-    const files = await File.find({ userId, status: { $in: ['ready', 'needs_review'] } }).select('fileName rawText folderId');
-    const results = [];
-    for (const f of files) {
-      const text = (f.rawText || '').toLowerCase();
-      const inName = (f.fileName || '').toLowerCase().includes(needle);
-      const idx = text.indexOf(needle);
-      if (!inName && idx === -1) continue;
-      let snippet = '';
-      if (idx !== -1) {
-        const raw = f.rawText || '';
-        const start = Math.max(0, idx - 60);
-        snippet =
-          (start > 0 ? '…' : '') +
-          raw.slice(start, idx + needle.length + 90).replace(/\s+/g, ' ').trim() +
-          '…';
-      }
-      let count = 0;
-      let i = 0;
-      while (count < 999) {
-        const j = text.indexOf(needle, i);
-        if (j === -1) break;
-        count++;
-        i = j + needle.length;
-      }
-      results.push({ fileId: f._id, fileName: f.fileName, folderId: f.folderId || null, count, snippet, inName });
-      if (results.length >= 100) break;
-    }
-    results.sort((a, b) => b.count - a.count);
-    res.json({ results });
+    const viewer = await viewerFor(req.query.userId);
+    if (!viewer) return res.status(400).json({ message: 'A valid userId is required' });
+    const { q, limit } = req.query;
+    const filters = {
+      batchId: id(req.query.batchId),
+      folderId: id(req.query.folderId),
+      documentType: req.query.documentType ? String(req.query.documentType) : undefined,
+      status: req.query.status ? String(req.query.status).split(',') : undefined,
+      from: date(req.query.from),
+      to: date(req.query.to),
+    };
+    res.json(await getSearchProvider().search({ viewer, q, filters, limit }));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('search error:', err && err.message);
+    res.status(500).json({ message: 'Search is unavailable right now' });
   }
 });
 

@@ -239,6 +239,9 @@ export interface ContentHit {
   count: number;
   snippet: string;
   inName: boolean;
+  highlights?: [number, number][]; // ranges in snippet to mark
+  page?: number | null; // page of the first match
+  status?: FileStatus;
 }
 
 export const searchContent = (userId: string, q: string) =>

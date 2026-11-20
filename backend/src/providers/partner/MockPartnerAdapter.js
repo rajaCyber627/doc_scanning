@@ -5,12 +5,14 @@ const MockPartnerRecord = require('./MockPartnerRecord.model');
 const people = require('./seed-people.json');
 
 class MockPartnerAdapter extends PartnerAdapter {
+  // Create or update (same documentId = update, like a real system of record would).
   async pushDocument(document, payload = {}) {
-    const rec = await MockPartnerRecord.create({
-      kind: 'document',
-      sha256: document.sha256 || null,
-      payload: { documentId: String(document._id), fileName: document.fileName, ...payload },
-    });
+    const body = { documentId: String(document._id), fileName: document.fileName, ...payload };
+    const rec = await MockPartnerRecord.findOneAndUpdate(
+      { kind: 'document', 'payload.documentId': body.documentId },
+      { kind: 'document', sha256: document.sha256 || null, payload: body },
+      { upsert: true, new: true }
+    );
     return { partnerDocumentId: `mock-${rec._id}` };
   }
 

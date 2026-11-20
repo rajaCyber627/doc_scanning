@@ -11,6 +11,7 @@ const { enqueueDocument } = require('../intake/pipeline');
 const { emitAudit } = require('../../core/audit');
 const { removeDocument } = require('./removeDocument');
 const OcrPage = require('../ocr/OcrPage.model');
+const events = require('../../core/events');
 
 // In-memory upload; the buffer goes straight to S3 (no local disk needed).
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -141,6 +142,7 @@ router.patch('/api/files/:id', async (req, res) => {
         documentId: file._id,
         details: changes,
       });
+      events.emit('document.changed', String(file._id));
     }
     res.json(file);
   } catch (err) {

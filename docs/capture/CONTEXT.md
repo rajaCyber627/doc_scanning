@@ -257,7 +257,13 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   quality reasons, EXIF upright + straighten-and-reread for single images, searchable PDF). Generic
   `File.reviewReasons` → runner sets `needs_review`; `POST /api/files/:id/review` resolves (history in
   `resolvedReviewReasons`). needs_review docs are openable/askable/searchable. See `docs/capture/ocr.md`.
-- [ ] P07 Full-text indexing
+- [x] P07 Full-text indexing — `models/SearchDoc` (normalized text + page offsets + language +
+  access fields), `features/search/indexer` (indexDocument, syncToPartner, payload v1; listens to
+  `document.changed`), `providers/search` (mongo text search w/ phrases, exclusions, substring
+  fallback, safe highlight ranges; atlas stub), `core/access` (viewerFor, visibilityFilter;
+  `User.permissions` contains "restricted"). Partner payload schema:
+  `docs/capture/partner-payload.schema.json` (validated in tests with ajv). Handoff only when status
+  is ready. `scripts/reindex-search.js`. See `docs/capture/search.md`.
 - [ ] P08 Duplicate detection
 - [ ] P09 Metadata entry
 - [ ] P10 Automated / assisted classification
