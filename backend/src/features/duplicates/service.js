@@ -59,7 +59,8 @@ function reasonFor(match, file, canSeeRestricted) {
 /** Fingerprint + matches for a processed document. Returns fields to save. */
 async function checkDuplicates(file) {
   const fp = fingerprint(file.rawText);
-  const base = { _id: { $ne: file._id }, status: { $in: LIVE }, supersededBy: null };
+  // a split original and the file a part was cut from are never "duplicates" of it
+  const base = { _id: { $nin: [file._id, ...(file.derivedFrom || [])] }, status: { $in: LIVE }, supersededBy: null, 'splitInto.0': { $exists: false } };
   const fields = '_id fileName createdAt userId batchId confidentiality minhash numberTokens handoff';
   const found = new Map(); // fileId → match (exact beats content)
   const add = (o, kind, sim) => {

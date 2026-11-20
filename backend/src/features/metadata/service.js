@@ -250,6 +250,7 @@ async function nextIncomplete(userId, afterId) {
     status: { $in: ['ready', 'needs_review'] },
     metadataStatus: { $ne: 'complete' },
     supersededBy: null,
+    'splitInto.0': { $exists: false },
     ...(viewer.canSeeRestricted ? {} : { confidentiality: { $ne: 'restricted' } }),
   };
   if (afterId && mongoose.isValidObjectId(afterId)) q._id = { $ne: afterId };

@@ -69,7 +69,7 @@ async function textWithPages(file) {
 async function indexDocument(fileId) {
   const file = await File.findById(fileId).lean();
   // superseded versions leave search; the current version replaces them
-  if (!file || !SEARCHABLE.includes(file.status) || file.supersededBy) {
+  if (!file || !SEARCHABLE.includes(file.status) || file.supersededBy || (file.splitInto && file.splitInto.length)) {
     await SearchDoc.deleteOne({ fileId });
     return null;
   }
@@ -150,6 +150,7 @@ function buildPayload(file, sd) {
 async function syncToPartner(fileId) {
   const file = await File.findById(fileId).lean();
   if (!file || file.status !== 'ready' || file.supersededBy) return null; // not ready, or an old version
+  if (file.splitInto && file.splitInto.length) return null; // split: its parts are sent instead
   // the system of record needs the standard metadata: hold back until it is complete
   if (config.metadata.requiredForHandoff && file.metadataStatus !== 'complete') return null;
   const sd = await SearchDoc.findOne({ fileId: file._id }).lean();

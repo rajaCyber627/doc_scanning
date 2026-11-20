@@ -128,7 +128,10 @@ export default function ClassificationPanel({
               ) : (
                 <strong>
                   {s.person?.match?.name || s.person?.name || "Not found"}
-                  {s.person?.match?.kind === "id" ? " ✓ ID matched" : s.person?.match?.kind === "name" ? " (name match only)" : s.person?.match?.kind === "ambiguous" ? " (several people match)" : s.person?.name ? " (not in directory)" : ""}
+                  {s.person?.match?.nameMismatch ? (
+                    <span style={{ color: "var(--danger)" }}> ⚠ this ID belongs to {s.person.match.name}, but the document says “{s.person.match.nameOnDocument}”</span>
+                  ) : null}
+                  {s.person?.match?.nameMismatch ? "" : s.person?.match?.kind === "id" ? " ✓ ID matched" : s.person?.match?.kind === "name" ? " (name match only)" : s.person?.match?.kind === "ambiguous" ? " (several people match)" : s.person?.name ? " (not in directory)" : ""}
                 </strong>
               )}
               <span className={`badge ${tone(c.confidence?.person)}`}>{pct(c.confidence?.person)}</span>

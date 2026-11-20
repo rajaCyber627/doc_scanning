@@ -10,10 +10,13 @@ const config = require('../../core/config');
 const storage = require('../../providers/storage');
 const { createChildren } = require('../documents/children');
 const { buildRendition } = require('../documents/rendition');
+const File = require('../../models/File');
 const OcrPage = require('../ocr/OcrPage.model');
 const { indexDocument, syncToPartner } = require('../search/indexer');
 const { checkDuplicates } = require('../duplicates/service');
 const { runClassification } = require('../classification/service');
+const { autoSplit, isSplit } = require('../splitting/service');
+const { partText } = require('../splitting/partText');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -27,6 +30,19 @@ async function fitText(file, rawText) {
   const textS3Key = `${file.s3Key}.extracted.txt`;
   await storage.putStream(textS3Key, Buffer.from(rawText, 'utf8'), 'text/plain; charset=utf-8');
   return { rawText: rawText.slice(0, max), textLength: rawText.length, textTruncated: true, textS3Key };
+}
+
+/** Build and store the PDF view; returns the fields to save (or undefined). */
+async function renderView(ctx) {
+  const f = ctx.file;
+  let convertedImage = ctx.convertedImage;
+  if (!convertedImage && f.ocrSourceS3Key) convertedImage = await storage.s3GetBuffer(f.ocrSourceS3Key);
+  const ocrPages = await OcrPage.find({ fileId: f._id }).select('page words').sort({ page: 1 }).lean();
+  const r = await buildRendition({ fileName: f.fileName, buffer: await ctx.getBuffer(), rawText: f.rawText, convertedImage, ocrPages });
+  if (!r) return undefined;
+  const key = `${f.s3Key}.view.pdf`;
+  await storage.putStream(key, r.pdf, 'application/pdf');
+  return { renditionS3Key: key, renditionMethod: r.method, ...(r.pageCount && !f.pageCount ? { pageCount: r.pageCount } : {}) };
 }
 
 const STAGES = [
@@ -55,7 +71,7 @@ const STAGES = [
     // AI overview.
     async run(ctx) {
       const f = ctx.file;
-      const extracted = await extractContent(f, await ctx.getBuffer());
+      const extracted = (await partText(f)) || (await extractContent(f, await ctx.getBuffer()));
       const { rawText, tablesCsv } = extracted;
       ctx.convertedImage = extracted.convertedImage || null; // reused by the render stage
       let childSummary;
@@ -82,11 +98,30 @@ const STAGES = [
     },
   },
   {
+    name: 'separate',
+    blocking: true,
+    // Separator sheets (QR / printed code, optionally blank pages) → cut the file into
+    // its documents automatically. The original stays, linked to its parts.
+    async run(ctx) {
+      const f = ctx.file;
+      if (f.splitFrom || !(f.pageCount > 1)) return undefined;
+      // scanned TIFFs: build the page view now (the splitter cuts its pages)
+      if (!/pdf/i.test(f.mimeType || '') && !f.renditionS3Key) {
+        const r = await renderView(ctx);
+        if (r) await File.updateOne({ _id: f._id }, r);
+        Object.assign(f, r || {});
+      }
+      await autoSplit(f, /pdf/i.test(f.mimeType || '') ? await ctx.getBuffer() : null);
+      return undefined;
+    },
+  },
+  {
     name: 'dedupe',
     blocking: true,
     // Same file / same content already captured (hub or partner)? → needs review.
+    // A split original is represented by its parts.
     async run(ctx) {
-      return checkDuplicates(ctx.file);
+      return isSplit(ctx.file) ? undefined : checkDuplicates(ctx.file);
     },
   },
   {
@@ -94,7 +129,7 @@ const STAGES = [
     blocking: true,
     // AI suggestions for type / person / confidentiality / details → review queue.
     async run(ctx) {
-      return runClassification(ctx.file);
+      return isSplit(ctx.file) ? undefined : runClassification(ctx.file);
     },
   },
   {
@@ -112,15 +147,9 @@ const STAGES = [
     // PDF view for formats browsers can't display (the original is never changed).
     async run(ctx) {
       const f = ctx.file;
-      if (f.renditionS3Key) return undefined;
-      let convertedImage = ctx.convertedImage;
-      if (!convertedImage && f.ocrSourceS3Key) convertedImage = await storage.s3GetBuffer(f.ocrSourceS3Key);
-      const ocrPages = await OcrPage.find({ fileId: f._id }).select('page words').sort({ page: 1 }).lean();
-      const r = await buildRendition({ fileName: f.fileName, buffer: await ctx.getBuffer(), rawText: f.rawText, convertedImage, ocrPages });
-      if (!r) return undefined;
-      const key = `${f.s3Key}.view.pdf`;
-      await storage.putStream(key, r.pdf, 'application/pdf');
-      return { renditionS3Key: key, renditionMethod: r.method, ...(r.pageCount && !f.pageCount ? { pageCount: r.pageCount } : {}) };
+      // parts cut from a PDF view already carry its text layer
+      if (f.renditionS3Key || (f.splitFrom && f.splitFrom.hasTextLayer)) return undefined;
+      return renderView(ctx);
     },
   },
   {

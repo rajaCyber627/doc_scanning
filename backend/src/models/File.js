@@ -81,6 +81,14 @@ const fileSchema = new mongoose.Schema(
     // Split / merge lineage (P11 / P12) — originals are never deleted
     parentDocumentId: { type: mongoose.Schema.Types.ObjectId, ref: 'File', default: null },
     derivedFrom: [{ type: mongoose.Schema.Types.ObjectId, ref: 'File' }],
+    // Split (P11): the original lists its parts; each part records where it came from
+    // { fileId, splitId, part, pages: [original page numbers], via, hasTextLayer, prefill }
+    splitInto: [{ type: mongoose.Schema.Types.ObjectId, ref: 'File' }],
+    splitAt: { type: Date, default: null },
+    splitBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    splitLock: { type: String, default: null },
+    splitFrom: { type: mongoose.Schema.Types.Mixed, default: null },
+    splitSuggestion: { type: mongoose.Schema.Types.Mixed, default: null }, // AI-suggested cuts
 
     // ----- Pipeline tracking -----
     stage: { type: String, default: null }, // current stage, or 'done'

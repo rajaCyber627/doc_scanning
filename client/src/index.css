@@ -941,3 +941,26 @@ input[type="checkbox"]:focus-visible {
   padding: 4px 6px;
   border-bottom: 1px solid var(--border-muted);
 }
+
+/* --- page view / splitting (P11) --- */
+.split-toolbar { display: flex; gap: 6px; flex-wrap: wrap; }
+.split-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .split-layout { grid-template-columns: 1fr; } }
+.split-grid-card { padding: 12px; min-width: 0; }
+.split-grid { display: flex; flex-wrap: wrap; align-items: flex-start; row-gap: 14px; }
+.split-cell { display: flex; align-items: stretch; }
+.split-gutter { width: 22px; margin: 0 2px; border: none; background: transparent; cursor: pointer; position: relative; color: var(--muted); padding: 0; }
+.split-gutter::before { content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px; border-left: 2px dashed transparent; }
+.split-gutter:hover::before { border-left-color: var(--border); }
+.split-gutter span { position: relative; background: var(--surface, #fff); font-size: 13px; opacity: 0; }
+.split-gutter:hover span, .split-gutter:focus-visible span { opacity: 1; }
+.split-gutter.on { color: var(--danger); }
+.split-gutter.on::before { border-left: 3px solid var(--danger); }
+.split-gutter.on span { opacity: 1; }
+.split-thumb { margin: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--overlay); }
+.split-thumb canvas { display: block; }
+.split-thumb.removed { opacity: 0.35; }
+.split-thumb.removed canvas { filter: grayscale(1); }
+.split-thumb figcaption { display: flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: 12px; border-top: 1px solid var(--border); }
+.split-thumb.small { border-radius: 4px; }
+.split-thumb-ph { background: var(--overlay); }

@@ -3,7 +3,7 @@
 //     ocrSourceS3Key?, email?, ocr?, reviewReasons? }
 // `children` (emails, archives) are created as their own documents by the intake stage.
 const mammoth = require('mammoth');
-const pdfParse = require('pdf-parse');
+const { parsePdf } = require('./formats/pdfText');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
 const { runOcr } = require('../ocr/service');
@@ -21,7 +21,7 @@ async function extractPdf(file, buf) {
   // Try the free local text layer first; OCR only when there is little or no text
   // (i.e. a scanned / image-only PDF).
   try {
-    const parsed = await pdfParse(buf);
+    const parsed = await parsePdf(buf);
     const text = (parsed.text || '').trim();
     const pages = parsed.numpages || 1;
     if (text.length / pages >= 100) return { rawText: text, tablesCsv: '', pageCount: pages };

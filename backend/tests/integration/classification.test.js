@@ -125,6 +125,19 @@ describe('suggestions', () => {
   });
 });
 
+describe('person checks', () => {
+  test('an ID that belongs to someone else in the directory is flagged, not trusted', async () => {
+    fakes.__classifyReplies.push(answer({ person: { name: 'Maria Rivera', employeeId: '1045', applicantNumber: null, quote: 'Maria Rivera', page: 1 } }));
+    const f = await upload('offer.docx', offer());
+    expect(f.classification.suggestion.person.match).toMatchObject({ kind: 'id', name: 'John Smith', nameMismatch: true, nameOnDocument: 'Maria Rivera' });
+    expect(f.classification.confidence.person).toBe(0.5);
+    // name order / middle initials are not a mismatch
+    fakes.__classifyReplies.push(answer({ person: { name: 'SMITH, John Q.', employeeId: '1045', applicantNumber: null, quote: 'x', page: 1 } }));
+    const g = await upload('evaluation.txt', fs.readFileSync(fixture('evaluation.txt')));
+    expect(g.classification.suggestion.person.match.nameMismatch).toBeUndefined();
+  });
+});
+
 describe('restricted-first routing', () => {
   test('a possibly-medical document is protected immediately, even at low confidence, and only shows in the restricted queue', async () => {
     fakes.__classifyReplies.push(

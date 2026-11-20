@@ -7,7 +7,7 @@ const cors = require('cors');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 // Each feature exposes an Express router from features/<name>/routes.js.
-const FEATURES = ['auth', 'prompts', 'upload', 'batches', 'duplicates', 'metadata', 'classification', 'intake', 'documents', 'search', 'tables', 'folders', 'query'];
+const FEATURES = ['auth', 'prompts', 'upload', 'batches', 'duplicates', 'metadata', 'classification', 'splitting', 'intake', 'documents', 'search', 'tables', 'folders', 'query'];
 
 function createApp() {
   const app = express();

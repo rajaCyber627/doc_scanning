@@ -13,6 +13,7 @@ import OcrPanel from "../features/ocr/OcrPanel";
 import DuplicatePanel from "../features/duplicates/DuplicatePanel";
 import MetadataPanel from "../features/metadata/MetadataPanel";
 import ClassificationPanel from "../features/classification/ClassificationPanel";
+import PagesCard from "../features/splitting/PagesCard";
 import { getUser } from "../auth";
 import {
   getFile,
@@ -522,6 +523,7 @@ export default function FilePage() {
             <MetadataPanel fileId={file._id} userId={user._id} initial={file.metadata || {}} status={file.metadataStatus} serverErrors={file.metadataErrors} onSaved={load} />
           )}
           {(file.duplicateOf?.length ?? 0) > 0 && <DuplicatePanel fileId={file._id} userId={user._id} onChanged={load} />}
+          <PagesCard file={file} userId={user._id} />
           <OcrPanel file={file} userId={user._id} onChanged={load} />
           <RelatedDocuments detail={state} />
           <div className="card" style={{ marginBottom: 16 }}>

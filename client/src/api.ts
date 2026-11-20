@@ -55,6 +55,10 @@ export interface FileItem {
   metadataErrors?: { field: string; message: string }[];
   supersedes?: string | null;
   supersededBy?: string | null;
+  pageCount?: number | null;
+  splitInto?: string[];
+  splitAt?: string | null;
+  splitFrom?: { fileId: string; part: number; pages: number[]; via: string } | null;
   ocr?: {
     provider: string;
     pages: number;

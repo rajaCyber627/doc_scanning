@@ -285,7 +285,15 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   auto-accept off by default + threshold), ClassificationOutcome accuracy). Review endpoint refuses
   while classification reasons are open. Client ClassificationPanel (quote chips find text on the
   page), ReviewQueuePage `/review`, AiSettingsCard on TaxonomyPage. See `docs/capture/classification.md`.
-- [ ] P11 Document splitting
+- [x] P11 Document splitting — `features/splitting` (pages: page source = original PDF or PDF view,
+  per-page text from OcrPage / text layer, page JPEGs; separators: QR (jsQR) + printed code
+  `DOCP-SEP:v1;type=;emp=`, blank-page mode, printable sheet (qrcode + pdf-lib); suggest: AI cuts
+  with reasons; service: validatePlan, applySplit (atomic lock, parts as PDFs with derivedFrom/
+  splitFrom, OCR/text reused, original gets splitInto and leaves search/handoff/dedupe), autoSplit
+  in new blocking `separate` stage; lineage). Classification uses splitFrom.prefill; name/ID
+  mismatch flagged. pdf-parse falls back to pdf.js 2.0 (`documents/formats/pdfText.js`). Client
+  SplitPage `/files/:id/pages` (react-pdf thumbnails, cuts, rotate, remove, preview), PagesCard,
+  SeparatorSheetCard. See `docs/capture/splitting.md`.
 - [ ] P12 Document merging
 - [ ] P13 Scanning
 - [ ] P14 Batch scanning

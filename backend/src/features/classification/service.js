@@ -70,6 +70,15 @@ function fieldGuide(tax) {
   return [...seen.values()].join('\n');
 }
 
+// "Patel, Priya" / "PRIYA  PATEL" / "Priya R. Patel" all count as the same name
+const nameTokens = (s) => String(s || '').toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).filter((t) => t.length > 1);
+function sameName(a, b) {
+  const [x, y] = [nameTokens(a), nameTokens(b)];
+  if (!x.length || !y.length) return true;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  return short.every((t) => long.includes(t));
+}
+
 /** Find the suggested person in the HR directory: exact ID > unique exact name. */
 async function matchPerson(p) {
   const partner = getPartner();
@@ -77,7 +86,12 @@ async function matchPerson(p) {
   for (const [field, val] of [['employeeId', p.employeeId], ['applicantNumber', p.applicantNumber]]) {
     if (!val) continue;
     const hits = (await partner.lookupPerson(String(val))).filter((x) => norm(x[field]) === norm(val));
-    if (hits.length === 1) return { kind: 'id', personId: hits[0].personId, name: hits[0].name, employeeId: hits[0].employeeId, applicantNumber: hits[0].applicantNumber };
+    if (hits.length === 1) {
+      const m = { kind: 'id', personId: hits[0].personId, name: hits[0].name, employeeId: hits[0].employeeId, applicantNumber: hits[0].applicantNumber };
+      // the document names someone else than the directory has for this ID: a person must check
+      if (p.name && !sameName(p.name, hits[0].name)) Object.assign(m, { nameMismatch: true, nameOnDocument: p.name });
+      return m;
+    }
   }
   if (p.name) {
     const hits = (await partner.lookupPerson(p.name)).filter((x) => norm(x.name) === norm(p.name));
@@ -85,6 +99,33 @@ async function matchPerson(p) {
     if (hits.length > 1) return { kind: 'ambiguous', candidates: hits.length };
   }
   return { kind: 'none' };
+}
+
+/** Person named on a separator sheet / chosen when splitting. */
+async function matchPrefill(prefill) {
+  if (prefill.personId) {
+    const p = await getPartner().getPerson(prefill.personId);
+    if (p) return { kind: 'id', personId: p.personId, name: p.name, employeeId: p.employeeId, applicantNumber: p.applicantNumber };
+  }
+  return prefill.employeeId ? matchPerson({ employeeId: prefill.employeeId }) : { kind: 'none' };
+}
+
+/** A suggestion from separator-sheet details alone (AI off, or no text to read). */
+function fromPrefill(prefill, tax) {
+  const type = prefill.documentType && tax.documentTypes.find((t) => t.key === prefill.documentType);
+  return {
+    model: 'separator-sheet',
+    truncated: false,
+    answer: {
+      documentType: type ? type.key : null,
+      confidentialityLevel: (type && type.defaultConfidentiality) || 'Confidential',
+      restrictedLikely: false,
+      person: { name: null, employeeId: prefill.employeeId || null, applicantNumber: null, quote: null, page: null },
+      fields: [],
+      // without a type we cannot judge confidentiality → restricted-first
+      confidence: { documentType: type ? 1 : 0, person: 0, confidentiality: type ? 1 : 0 },
+    },
+  };
 }
 
 /** Metadata form input built from a suggestion. */
@@ -107,14 +148,18 @@ function withoutStage(reasons) {
 /** The "classify" pipeline stage. Returns the fields to save on the document. */
 async function runClassification(file) {
   const settings = await getSettings();
-  if (!settings.aiEnabled) return { classification: { status: 'disabled', at: new Date() } };
+  // Details printed on a separator sheet (or chosen when splitting) are trusted hints.
+  const prefill = (file.splitFrom && file.splitFrom.prefill) || {};
+  const hasPrefill = !!(prefill.documentType || prefill.employeeId || prefill.personId);
+  if (!settings.aiEnabled && !hasPrefill) return { classification: { status: 'disabled', at: new Date() } };
   const pages = await OcrPage.find({ fileId: file._id }).select('page text').sort({ page: 1 }).lean();
-  if (!pages.length && !String(file.rawText || '').trim()) return { classification: { status: 'skipped', reason: 'no text', at: new Date() } };
+  const hasText = pages.length > 0 || !!String(file.rawText || '').trim();
+  if (!hasText && !hasPrefill) return { classification: { status: 'skipped', reason: 'no text', at: new Date() } };
 
   const tax = await metadata.getTaxonomy();
   let result;
   try {
-    result = await classify({ taxonomy: tax, fieldGuide: fieldGuide(tax), pages, rawText: file.rawText });
+    result = settings.aiEnabled && hasText ? await classify({ taxonomy: tax, fieldGuide: fieldGuide(tax), pages, rawText: file.rawText }) : fromPrefill(prefill, tax);
   } catch (e) {
     if (!(e instanceof ClassificationFailed)) throw e;
     await emitAudit({ userId: file.userId, action: 'classification.failed', documentId: file._id, details: { error: e.message } });
@@ -125,12 +170,25 @@ async function runClassification(file) {
   }
 
   const { answer, model, truncated } = result;
-  const type = answer.documentType ? tax.documentTypes.find((t) => t.key === answer.documentType) : null;
+  let type = answer.documentType ? tax.documentTypes.find((t) => t.key === answer.documentType) : null;
+  const preType = prefill.documentType && tax.documentTypes.find((t) => t.key === prefill.documentType);
+  if (preType) {
+    type = preType;
+    answer.confidence.documentType = 1;
+  }
   const allowed = new Set(metadata.fieldsFor(type).filter((f) => !['person', 'doctype'].includes(f.type) && f.key !== 'confidentialityLevel').map((f) => f.key));
   const fields = answer.fields.filter((f) => allowed.has(f.key) && String(f.value).trim()).slice(0, 40);
-  const match = await matchPerson(answer.person);
+  let match = await matchPerson(answer.person);
+  if (prefill.personId || prefill.employeeId) {
+    const pre = await matchPrefill(prefill);
+    if (pre.kind === 'id') {
+      match = pre;
+      answer.confidence.person = 1;
+    }
+  }
   // Restricted-first: when the AI is unsure about confidentiality, protect the record.
   const unsureConfidentiality = !(answer.confidence.confidentiality >= RESTRICTED_FIRST_BELOW);
+  if (match.nameMismatch) answer.confidence.person = Math.min(answer.confidence.person, 0.5);
   const restricted = answer.restrictedLikely || answer.confidentialityLevel === 'Restricted' || (type && type.defaultConfidentiality === 'Restricted') || unsureConfidentiality;
   const suggestion = {
     documentType: type ? type.key : null,
@@ -159,7 +217,7 @@ async function runClassification(file) {
 
   // Auto-accept only very confident suggestions with an exact person match (admin opt-in).
   const threshold = (type && settings.typeThresholds[type.key]) || settings.autoAcceptThreshold;
-  const confident = type && match.kind === 'id' && Math.min(confidence.documentType, confidence.person, confidence.confidentiality) >= threshold;
+  const confident = type && match.kind === 'id' && !match.nameMismatch && Math.min(confidence.documentType, confidence.person, confidence.confidentiality) >= threshold;
   if (settings.autoAccept && confident && !restricted) {
     const doc = await File.findById(file._id);
     const { errors } = await metadata.applyMetadata(doc, suggestionToInput(suggestion), null, { auditAction: 'metadata.auto_filled' });
