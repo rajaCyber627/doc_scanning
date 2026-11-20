@@ -301,7 +301,14 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   applyMetadata; already-restricted docs always go to the restricted queue. pdfText.js fixes
   pdf-parse's pooled-Buffer bug. Client MergeModal (drag/←→ reorder, rotate, leave out, conflicts,
   restricted acknowledgement) from the Documents bulk bar. See `docs/capture/merging.md`.
-- [ ] P13 Scanning
+- [x] P13 Scanning — client `features/scan` (CameraScanPage `/scan`: live camera + outline,
+  detectQuad / homography / warp / documentFilter in scanMath.ts, draggable corners, multi-page,
+  reorder/retake, pdf-lib PDF → uploadFile with hints {source:'camera', device, pages}; photo-picker
+  fallback; ScanTips; ScannerFoldersCard in Settings). Backend: upload accepts hints.source
+  upload|camera (+ audit document.captured); `features/hotfolder` (profiles in Setting
+  'hotfolders', local share under HOTFOLDER_ROOT or S3 prefix, stability check, import → File
+  source=scanner + batch per sub-folder/day, move to .imported/.rejected, HotFolderImport log,
+  scheduler started from backend/app.js), storage.listObjects. See `docs/capture/scanning.md`.
 - [ ] P14 Batch scanning
 - [ ] P15 Email capture
 - [ ] P16 Import from shared drives

@@ -6,6 +6,7 @@ const NAV = [
   { to: "/", label: "Overview", icon: "▚", end: true },
   { to: "/ask", label: "Ask everything", icon: "🔎" },
   { to: "/documents", label: "Documents", icon: "▤" },
+  { to: "/scan", label: "Scan with camera", icon: "📷" },
   { to: "/batches", label: "Batches", icon: "🗂" },
   { to: "/review", label: "Review queue", icon: "✓" },
   { to: "/tables", label: "Saved tables", icon: "▦" },

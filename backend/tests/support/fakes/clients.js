@@ -54,6 +54,16 @@ const s3 = {
       return {};
     },
   }),
+  listObjectsV2: ({ Prefix = '', MaxKeys = 1000 }) => ({
+    promise: async () => ({
+      Contents: [...objects.keys()]
+        .filter((k) => k.startsWith(Prefix))
+        .sort()
+        .slice(0, MaxKeys)
+        .map((Key) => ({ Key, Size: objects.get(Key).length, LastModified: new Date(0) })),
+      IsTruncated: false,
+    }),
+  }),
   createMultipartUpload: ({ Key }) => ({
     promise: async () => {
       const UploadId = `mp-${multiparts.size + 1}-${Date.now()}`;

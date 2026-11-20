@@ -66,6 +66,18 @@ async function putStream(key, body, contentType) {
   await s3.upload({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }).promise();
 }
 
+/** Objects under a prefix: [{ key, size, lastModified }] (paged through). */
+async function listObjects(prefix, max = 1000) {
+  const out = [];
+  let token;
+  do {
+    const r = await s3.listObjectsV2({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token, MaxKeys: Math.min(1000, max - out.length) }).promise();
+    for (const o of r.Contents || []) out.push({ key: o.Key, size: Number(o.Size), lastModified: o.LastModified ? new Date(o.LastModified) : null });
+    token = r.IsTruncated ? r.NextContinuationToken : null;
+  } while (token && out.length < max);
+  return out;
+}
+
 async function deleteObject(key) {
   await s3.deleteObject({ Bucket: BUCKET, Key: key }).promise();
 }
@@ -81,4 +93,5 @@ module.exports = {
   abortMultipart,
   putStream,
   deleteObject,
+  listObjects,
 };

@@ -11,8 +11,11 @@ import {
   SavedPromptItem,
 } from "../api";
 
+import ScannerFoldersCard from "../features/scan/ScannerFoldersCard";
+
 export default function Settings() {
   const user = getUser()!;
+  const isAdmin = user.role === "admin" || (user.permissions || []).includes("admin");
   const [theme, setTheme] = useState(() =>
     document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"
   );
@@ -196,6 +199,8 @@ export default function Settings() {
           </button>
         </div>
       </div>
+
+      {isAdmin && <ScannerFoldersCard userId={user._id} />}
 
       <div className="card">
         <div className="card-header">Appearance</div>

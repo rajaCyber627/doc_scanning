@@ -14,6 +14,7 @@ import BatchesPage from "./features/batches/BatchesPage";
 import BatchPage from "./features/batches/BatchPage";
 import TaxonomyPage from "./features/metadata/TaxonomyPage";
 import SplitPage from "./features/splitting/SplitPage";
+import CameraScanPage from "./features/scan/CameraScanPage";
 import ReviewQueuePage from "./features/classification/ReviewQueuePage";
 import { isAuthed } from "./auth";
 
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/files/:id" element={<Protected><FilePage /></Protected>} />
         <Route path="/files/:id/pages" element={<Protected><SplitPage /></Protected>} />
         <Route path="/batches" element={<Protected><BatchesPage /></Protected>} />
+        <Route path="/scan" element={<Protected><CameraScanPage /></Protected>} />
         <Route path="/review" element={<Protected><ReviewQueuePage /></Protected>} />
         <Route path="/taxonomy" element={<Protected><TaxonomyPage /></Protected>} />
         <Route path="/batches/:id" element={<Protected><BatchPage /></Protected>} />

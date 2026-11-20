@@ -27,6 +27,7 @@ class UploadError extends Error {
 const MB = 1024 * 1024;
 const fmtMB = (b) => `${Math.round((b / MB) * 10) / 10} MB`;
 const isId = (v) => !!v && mongoose.isValidObjectId(v);
+const CLIENT_SOURCES = ['upload', 'camera'];
 const touchBatch = (batchId) => batchId && events.emit('batch.touch', String(batchId));
 const safeKeyName = (name) => String(name).replace(/[^\w.\- ]+/g, '_').slice(-150);
 
@@ -226,7 +227,8 @@ async function completeSession(sessionId, { userId, parts }) {
     s3Key: s.s3Key,
     mimeType: s.mimeType,
     sizeBytes: s.sizeBytes,
-    source: 'upload',
+    // browsers may only claim upload or camera; scanner/email/import are set by the server
+    source: CLIENT_SOURCES.includes(hints.source) ? hints.source : 'upload',
     status: 'processing',
     metadata: {
       ...(hints.documentType ? { documentType: String(hints.documentType) } : {}),
@@ -245,6 +247,14 @@ async function completeSession(sessionId, { userId, parts }) {
     documentId: file._id,
     details: { uploadId: String(s._id), fileName: s.fileName, sizeBytes: s.sizeBytes, transport: s.transport },
   });
+  if (file.source === 'camera') {
+    await emitAudit({
+      userId: s.userId,
+      action: 'document.captured',
+      documentId: file._id,
+      details: { source: 'camera', device: String(hints.device || 'browser camera').slice(0, 120), pages: Number(hints.pages) || null },
+    });
+  }
   enqueueDocument(file._id);
   touchBatch(s.batchId);
   return File.findById(file._id).select('-rawText -tablesCsv -words');

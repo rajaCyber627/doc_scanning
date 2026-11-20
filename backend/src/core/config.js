@@ -77,6 +77,16 @@ module.exports = {
     skewDegrees: Number(env.OCR_SKEW_DEGREES || 3), // tilt worth flagging / straightening
   },
 
+  // Scanner hot folders (P13): network folders / S3 prefixes where scanners save files
+  hotfolder: {
+    enabled: env.HOTFOLDER_ENABLED !== 'false',
+    intervalSec: int(env.HOTFOLDER_INTERVAL_SEC, 30),
+    // local folders must be inside this directory (e.g. the mounted scanner share)
+    root: env.HOTFOLDER_ROOT || '',
+    stableSec: int(env.HOTFOLDER_STABLE_SEC, 5), // a file unchanged this long is complete
+    maxFilesPerPoll: int(env.HOTFOLDER_MAX_FILES, 200),
+  },
+
   duplicates: {
     // Estimated text similarity (0–1) at which two documents count as the same content
     contentSimilarity: Number(env.DUPLICATE_CONTENT_SIMILARITY || 0.75),
