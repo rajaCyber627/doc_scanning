@@ -146,13 +146,25 @@ a:hover {
   margin: 0 auto;
   padding: 24px 28px 60px;
 }
+.menu-toggle { display: none; font-size: 18px; }
 @media (max-width: 800px) {
   .body-grid {
     grid-template-columns: 1fr;
   }
+  /* small screens: the menu slides in from the ☰ button */
+  .menu-toggle { display: inline-flex; }
   .sidebar {
     display: none;
+    position: fixed;
+    left: 0;
+    top: 56px;
+    width: 260px;
+    z-index: 60;
+    background: var(--surface);
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.35);
   }
+  .sidebar.open { display: block; }
+  .sidebar-backdrop { position: fixed; inset: 56px 0 0 0; background: rgba(0, 0, 0, 0.4); z-index: 50; }
   .container {
     padding: 18px 16px 60px;
   }

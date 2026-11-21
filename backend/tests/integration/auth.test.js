@@ -59,3 +59,13 @@ describe('auth', () => {
     expect((await signup({ userName: 'carol', email: 'carol@example.com' })).status).toBe(400);
   });
 });
+
+test('GET /api/me returns the current account without the password', async () => {
+  const User = require('../../src/models/User');
+  const u = await User.create({ email: 'me@example.com', userName: 'me', password: 'secret-hash', permissions: ['admin'] });
+  const r = await request(app).get(`/api/me?userId=${u._id}`);
+  expect(r.status).toBe(200);
+  expect(r.body.userInfo).toMatchObject({ email: 'me@example.com', permissions: ['admin'] });
+  expect(r.body.userInfo.password).toBeUndefined();
+  expect((await request(app).get('/api/me?userId=nope')).status).toBe(400);
+});

@@ -142,6 +142,20 @@ router.post('/api/2fa', async (req, res) => {
   }
 });
 
+// The signed-in user's current account (rights may have changed since login)
+router.get('/api/me', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId || !require('mongoose').isValidObjectId(userId)) return res.status(400).json({ message: 'A valid userId is required' });
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ userInfo: safeUser(user) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Custom instructions applied to every query
 router.post('/api/user/instructions', async (req, res) => {
   try {
