@@ -2,7 +2,7 @@
 // (or charged for) a second time: OCR'd originals → the part's copied OcrPage records;
 // digital originals → splitFrom.pageTexts. Merged documents (P12) → mergeOf.pageTexts.
 const OcrPage = require('../ocr/OcrPage.model');
-const { qualityReasons } = require('../ocr/quality');
+const { qualityReasons, splitQuality } = require('../ocr/quality');
 
 const csvCell = (v) => {
   const s = String(v == null ? '' : v);
@@ -36,7 +36,7 @@ async function partText(file) {
       corrected: false,
       keyValues: pages.flatMap((p) => (p.keyValues || []).map((kv) => ({ ...kv, page: p.page }))).slice(0, 200),
     },
-    reviewReasons: qualityReasons(pages).map((r) => ({ ...r, stage: 'ocr' })),
+    ...splitQuality(qualityReasons(pages).map((r) => ({ ...r, stage: 'ocr' })), pages),
   };
 }
 

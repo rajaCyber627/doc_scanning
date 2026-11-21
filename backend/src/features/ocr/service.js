@@ -5,7 +5,7 @@ const storage = require('../../providers/storage');
 const { getOcrProvider } = require('../../providers/ocr');
 const File = require('../../models/File');
 const OcrPage = require('./OcrPage.model');
-const { qualityReasons, rotationOf, fold } = require('./quality');
+const { qualityReasons, splitQuality, rotationOf, fold } = require('./quality');
 const { uprightByExif, straighten } = require('./preprocess');
 
 const MAX_KEY_VALUES = 200;
@@ -82,7 +82,7 @@ async function runOcr(file, { image = null, ocrKey = null } = {}) {
   }
 
   await storePages(file._id, result.pages);
-  const reviewReasons = qualityReasons(result.pages, { corrected }).map((r) => ({ ...r, stage: 'ocr' }));
+  const { reviewReasons, notes } = splitQuality(qualityReasons(result.pages, { corrected }).map((r) => ({ ...r, stage: 'ocr' })), result.pages);
   const confs = result.pages.map((p) => p.confidence).filter((c) => typeof c === 'number');
   return {
     rawText: result.text,
@@ -97,6 +97,7 @@ async function runOcr(file, { image = null, ocrKey = null } = {}) {
       keyValues: result.keyValues.slice(0, MAX_KEY_VALUES),
     },
     reviewReasons,
+    notes,
     ocrSourceS3Key,
     convertedImage: ocrSourceS3Key ? imageBuf : null,
   };

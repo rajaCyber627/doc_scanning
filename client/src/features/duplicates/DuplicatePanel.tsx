@@ -101,7 +101,7 @@ export default function DuplicatePanel({ fileId, userId, onChanged }: { fileId: 
 
   const first = info.matches.find((m) => m.fileId);
   return (
-    <div className="card" style={{ marginBottom: 16 }}>
+    <div className="card dup-panel" id="duplicate-panel" style={{ marginBottom: 16 }}>
       <div className="card-header">{info.open ? "Possible duplicate" : "Duplicate check"}</div>
       <div style={{ padding: 14, display: "grid", gap: 10, fontSize: 13 }}>
         {info.matches.map((m, i) => (
@@ -136,10 +136,10 @@ export default function DuplicatePanel({ fileId, userId, onChanged }: { fileId: 
                   disabled={!!busy}
                   onClick={() => act(a.key)}
                   title={a.help}
-                  style={{ justifyContent: "flex-start" }}
+                  style={{ display: "block", textAlign: "left" }}
                 >
-                  {busy === a.key ? "Saving…" : a.label}
-                  <span className="faint" style={{ marginLeft: 6, fontWeight: 400 }}>— {a.help}</span>
+                  <span style={{ display: "block", fontWeight: 600 }}>{busy === a.key ? "Saving…" : a.label}</span>
+                  <span className="faint" style={{ display: "block", fontWeight: 400, fontSize: 12 }}>{a.help}</span>
                 </button>
               ))}
             </div>

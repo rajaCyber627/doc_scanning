@@ -80,6 +80,14 @@
       "defaultConfidentiality": "General",
       "defaultRetentionCategory": "Training records (confirm LVA schedule)",
       "order": 10
+    },
+    {
+      "key": "general",
+      "name": "General & reference documents",
+      "hrFunctionalArea": "General",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Administrative records (confirm LVA schedule)",
+      "order": 11
     }
   ],
   "documentTypes": [
@@ -1158,6 +1166,91 @@
       "defaultConfidentiality": "General",
       "defaultRetentionCategory": "Training records (confirm LVA schedule)",
       "fields": [],
+      "active": true,
+      "order": 5
+    },
+    {
+      "key": "general.reference-documents",
+      "name": "Reference documents (not about one employee)",
+      "categoryKey": "general",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Administrative records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "person",
+          "label": "Employee / applicant",
+          "type": "person",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 1
+    },
+    {
+      "key": "general.policies-and-procedures",
+      "name": "Policies and procedures",
+      "categoryKey": "general",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Administrative records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "person",
+          "label": "Employee / applicant",
+          "type": "person",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 2
+    },
+    {
+      "key": "general.solicitations-and-contracts",
+      "name": "Solicitations, proposals and contracts",
+      "categoryKey": "general",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Administrative records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "person",
+          "label": "Employee / applicant",
+          "type": "person",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 3
+    },
+    {
+      "key": "general.correspondence",
+      "name": "General correspondence",
+      "categoryKey": "general",
+      "defaultConfidentiality": "Confidential",
+      "defaultRetentionCategory": "Administrative records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "person",
+          "label": "Employee / applicant",
+          "type": "person",
+          "required": false
+        }
+      ],
+      "active": true,
+      "order": 4
+    },
+    {
+      "key": "general.forms-and-templates",
+      "name": "Blank forms and templates",
+      "categoryKey": "general",
+      "defaultConfidentiality": "General",
+      "defaultRetentionCategory": "Administrative records (confirm LVA schedule)",
+      "fields": [
+        {
+          "key": "person",
+          "label": "Employee / applicant",
+          "type": "person",
+          "required": false
+        }
+      ],
       "active": true,
       "order": 5
     }

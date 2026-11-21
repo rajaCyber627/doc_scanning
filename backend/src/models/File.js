@@ -31,6 +31,8 @@ const fileSchema = new mongoose.Schema(
     // Any open reason makes the finished document "needs_review" instead of "ready".
     reviewReasons: { type: Array, default: [] }, // [{ code, message, stage, page? }]
     resolvedReviewReasons: { type: Array, default: [] }, // history: reason + resolvedAt/By
+    // Page notes that do not block (blank / sideways pages in an otherwise readable document)
+    notes: { type: Array, default: [] }, // [{ code, message, page, stage }]
     reviewedAt: { type: Date, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     // Partner hand-off (P07): set once the partner HRDMS has accepted the document

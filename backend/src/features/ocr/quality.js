@@ -48,4 +48,19 @@ function qualityReasons(pages, { corrected = false } = {}) {
   return reasons;
 }
 
-module.exports = { qualityReasons, rotationOf, fold };
+const NOTE_CODES = new Set(['BLANK_PAGE', 'ROTATED', 'SKEWED']);
+
+/**
+ * Split quality findings into blocking review reasons and notes. In a document with other
+ * readable pages, blank / sideways / tilted pages are notes (shown with a "fix in the page
+ * view" action) — the text was read, nothing is lost. A blank single page, faint text and
+ * handwriting still need a person.
+ */
+function splitQuality(reasons, pages) {
+  const c = config.ocr;
+  const readable = pages.filter((p) => (p.words || []).length >= c.blankPageWords).length;
+  if (pages.length < 2 || readable === 0) return { reviewReasons: reasons, notes: [] };
+  return { reviewReasons: reasons.filter((r) => !NOTE_CODES.has(r.code)), notes: reasons.filter((r) => NOTE_CODES.has(r.code)) };
+}
+
+module.exports = { qualityReasons, splitQuality, rotationOf, fold };

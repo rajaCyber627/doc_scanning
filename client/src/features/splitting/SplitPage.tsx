@@ -157,7 +157,8 @@ export default function SplitPage() {
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>Pages</h1>
           <span className="faint" style={{ fontSize: 13 }}>
-            {pageCount} pages · click between two pages to cut there. The original is kept and linked to the parts.
+            {pageCount} page{pageCount === 1 ? "" : "s"}
+            {info.splittable ? " · click ✂ between two pages to cut there. The original is kept and linked to the parts." : ""}
           </span>
         </div>
         <div className="split-toolbar" role="toolbar" aria-label="Page view tools">
@@ -223,7 +224,7 @@ export default function SplitPage() {
       )}
       {!info.splittable && (
         <div className="card" style={{ padding: 12, marginBottom: 12 }}>
-          This document can't be split: {info.reason?.toLowerCase()}.
+          This document can't be split here: {info.reason ? info.reason.charAt(0).toLowerCase() + info.reason.slice(1) : ""}. You can still view its pages and print separator sheets.
         </div>
       )}
 

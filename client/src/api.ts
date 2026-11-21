@@ -48,6 +48,7 @@ export interface FileItem {
   parentDocumentId?: string | null;
   childSummary?: { created: number; skipped: { name: string; reason: string }[] };
   reviewReasons?: { code: string; message: string; stage?: string; page?: number }[];
+  notes?: { code: string; message: string; stage?: string; page?: number }[]; // non-blocking page notes
   duplicateOf?: { kind: string; where: string }[];
   metadata?: Record<string, any>;
   classification?: Record<string, any> | null;

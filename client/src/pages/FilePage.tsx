@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
 import AppShell from "../components/AppShell";
@@ -14,6 +14,7 @@ import DuplicatePanel from "../features/duplicates/DuplicatePanel";
 import MetadataPanel from "../features/metadata/MetadataPanel";
 import ClassificationPanel from "../features/classification/ClassificationPanel";
 import PagesCard from "../features/splitting/PagesCard";
+import AttentionCard from "../features/review/AttentionCard";
 import { getUser } from "../auth";
 import {
   getFile,
@@ -33,7 +34,7 @@ export default function FilePage() {
   const user = getUser()!;
   const [state, setState] = useState<FileDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("chat");
+  const [tab, setTab] = useState<Tab>("document"); // open on the document itself
   const [modal, setModal] = useState<TableResultItem | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -320,9 +321,21 @@ export default function FilePage() {
         >
           <span className="dot" /> {file.status}
         </span>
-        <button className="btn btn-sm btn-danger" style={{ marginLeft: "auto" }} onClick={removeDoc}>
-          Delete
-        </button>
+        <span style={{ marginLeft: "auto", display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+          {["ready", "needs_review"].includes(file.status) && (/pdf/i.test(file.mimeType || "") || !!file.renditionS3Key) && (
+            <Link className="btn btn-sm" to={`/files/${file._id}/pages`} title="See every page; split into documents, rotate or remove pages, print separator sheets">
+              📑 Pages &amp; split
+            </Link>
+          )}
+          {downloadUrl && (
+            <a className="btn btn-sm" href={downloadUrl} target="_blank" rel="noreferrer">
+              ⬇ Download
+            </a>
+          )}
+          <button className="btn btn-sm btn-danger" onClick={removeDoc}>
+            Delete
+          </button>
+        </span>
       </div>
       <div className="faint" style={{ fontSize: 12, marginBottom: 18 }}>
         Uploaded {dayjs(file.createdAt).format("MMM D, YYYY · h:mm A")}
@@ -331,6 +344,7 @@ export default function FilePage() {
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 22 }} className="fp-grid">
         {/* main */}
         <div style={{ minWidth: 0 }}>
+          <AttentionCard file={file} userId={user._id} onChanged={load} />
           <div className="tabs">
             <button className={"tab" + (tab === "chat" ? " active" : "")} onClick={() => setTab("chat")}>
               💬 Chat
@@ -519,7 +533,9 @@ export default function FilePage() {
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
           <ClassificationPanel file={file} userId={user._id} canSeeRestricted={canSeeRestricted} onChanged={load} onShowQuote={showQuote} />
-          {(file.status === "ready" || file.status === "needs_review") && (
+          {/* while an AI suggestion waits, the suggestion panel above is where details are confirmed
+              (one form at a time); the full form appears once it is accepted, or if the AI could not help */}
+          {(file.status === "ready" || file.status === "needs_review") && !(file.status === "needs_review" && (file.classification as any)?.status === "suggested") && (
             <MetadataPanel fileId={file._id} userId={user._id} initial={file.metadata || {}} status={file.metadataStatus} serverErrors={file.metadataErrors} onSaved={load} />
           )}
           {(file.duplicateOf?.length ?? 0) > 0 && <DuplicatePanel fileId={file._id} userId={user._id} onChanged={load} />}

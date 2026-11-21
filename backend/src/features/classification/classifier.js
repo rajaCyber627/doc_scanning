@@ -66,6 +66,8 @@ ${types}
 
 Confidentiality: medical, FMLA/leave, ADA/accommodation and workers' compensation records, employee-relations investigations and grievances are Restricted. Set restrictedLikely to true whenever the document might contain medical or other restricted information, even if you are unsure — it is used to protect the record before anyone sees it.
 
+Not every document is about one employee: requests for proposals, contracts, policies, newsletters, capability statements, letters to the City, blank forms and other reference material belong in the "general." types — choose the closest one (general.reference-documents when nothing else fits) and leave the person empty. Use null only when the text is unreadable.
+
 Person: the employee or applicant the document is about (not the author or a manager), with their employee ID or applicant number when the text shows one.
 
 Fields: fill only fields that apply to the chosen type and are stated in the text. Known fields:

@@ -27,7 +27,9 @@ export default function ClassificationPanel({
 }) {
   const nav = useNavigate();
   const [tax, setTax] = useState<Taxonomy | null>(null);
-  const [editing, setEditing] = useState(false);
+  const c0: any = (file as any).classification;
+  // the AI could not tell the type: start in edit mode so the person can choose it right away
+  const [editing, setEditing] = useState(() => !!c0 && c0.status === "suggested" && !c0.suggestion?.documentType);
   const [edits, setEdits] = useState<Record<string, any>>({});
   const [busy, setBusy] = useState("");
   const c: any = (file as any).classification;
@@ -37,6 +39,7 @@ export default function ClassificationPanel({
 
   if (!c || !["suggested", "failed"].includes(c.status) || file.status !== "needs_review") return null;
   const s = c.suggestion || { fields: [] };
+  const chosenType = edits.documentType || s.documentType || "";
   const queue = c.queue || "general";
 
   const goNext = async () => {
@@ -86,7 +89,7 @@ export default function ClassificationPanel({
   const typeName = (k?: string) => tax?.documentTypes.find((t) => t.key === k)?.name || k;
 
   return (
-    <div className="card" style={{ marginBottom: 16 }}>
+    <div className="card" id="classification-panel" style={{ marginBottom: 16, scrollMarginTop: 70 }}>
       <div className="card-header" style={{ display: "flex", gap: 8 }}>
         <span style={{ flex: 1 }}>{c.status === "failed" ? "Enter details" : "Suggested details"}</span>
         {queue === "restricted" && (
@@ -142,6 +145,11 @@ export default function ClassificationPanel({
               <strong>{s.confidentialityLevel}</strong>
               <span className={`badge ${tone(c.confidence?.confidentiality)}`}>{pct(c.confidence?.confidentiality)}</span>
             </div>
+            {editing && !s.documentType && (
+              <div className="faint" style={{ fontSize: 12 }}>
+                Not about one employee (an RFP, policy, letter, reference material)? Choose a type under “General &amp; reference documents” — no employee is needed.
+              </div>
+            )}
             {(s.fields || []).map((f: any) => (
               <div key={f.key}>
                 <div className="sugg-row">
@@ -162,10 +170,10 @@ export default function ClassificationPanel({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {c.status === "suggested" && (
             <>
-              <button className="btn btn-sm btn-primary" disabled={!!busy} onClick={() => accept(false)}>
+              <button className="btn btn-sm btn-primary" disabled={!!busy || !chosenType} title={chosenType ? undefined : "Choose the document type first"} onClick={() => accept(false)}>
                 {editing ? "Save & accept" : "Accept all"}
               </button>
-              <button className="btn btn-sm" disabled={!!busy} onClick={() => accept(true)}>
+              <button className="btn btn-sm" disabled={!!busy || !chosenType} onClick={() => accept(true)}>
                 {editing ? "Save, accept & next" : "Accept & next"}
               </button>
               {!editing && (

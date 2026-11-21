@@ -158,13 +158,15 @@ describe('quality checks → needs review', () => {
     expect((await request(app).post(`/api/files/${f._id}/review`).send({})).status).toBe(409);
   });
 
-  test('a multi-page scan at an angle is flagged (pages are not re-scanned)', async () => {
+  test('a multi-page scan at an angle is noted, not blocked (pages are not re-scanned)', async () => {
     const tilted = { lines: [{ text: 'tilted line one', angle: 7 }, { text: 'tilted line two', angle: 7 }, { text: 'and three', angle: 7 }] };
     fakes.__textract.results.set('default', buildBlocks([tilted, tilted]));
     const f = await upload('tilted.pdf', await scannedPdf(2));
-    expect(f.status).toBe('needs_review');
-    expect(f.reviewReasons.map((r) => r.code)).toEqual(['SKEWED', 'SKEWED']);
-    expect(f.reviewReasons[0].message).toMatch(/^Page 1: scanned at an angle \(7°\)/);
+    // the text was read: tilted pages in a readable document are notes, not blockers
+    expect(f.status).toBe('ready');
+    expect(f.reviewReasons).toEqual([]);
+    expect(f.notes.map((r) => r.code)).toEqual(['SKEWED', 'SKEWED']);
+    expect(f.notes[0].message).toMatch(/^Page 1: scanned at an angle \(7°\)/);
   });
 });
 

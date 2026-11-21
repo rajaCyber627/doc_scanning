@@ -25,12 +25,21 @@ class MetadataError extends Error {
 // Seed the RFP taxonomy into an empty database (checked on every use — a cheap count —
 // so an emptied collection is re-seeded; concurrent callers share one run).
 let seeding = null;
+let topUpDone = false; // once per process: add categories/types new in the seed file
 async function ensureSeeded() {
   if (seeding) return seeding;
   seeding = (async () => {
-    if (await DocumentType.estimatedDocumentCount()) return;
-    await RecordCategory.insertMany(seed.categories, { ordered: false }).catch(() => {});
-    await DocumentType.insertMany(seed.documentTypes, { ordered: false }).catch(() => {});
+    if (!(await DocumentType.estimatedDocumentCount())) {
+      await RecordCategory.insertMany(seed.categories, { ordered: false }).catch(() => {});
+      await DocumentType.insertMany(seed.documentTypes, { ordered: false }).catch(() => {});
+      topUpDone = true;
+      return;
+    }
+    if (topUpDone) return;
+    // an existing database gets entries added to the seed later (admin edits are kept)
+    for (const c of seed.categories) await RecordCategory.updateOne({ key: c.key }, { $setOnInsert: c }, { upsert: true });
+    for (const t of seed.documentTypes) await DocumentType.updateOne({ key: t.key }, { $setOnInsert: t }, { upsert: true });
+    topUpDone = true;
   })().finally(() => {
     seeding = null;
   });

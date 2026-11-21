@@ -48,14 +48,29 @@ async function upload(name = 'evaluation.txt', buf) {
 }
 const save = (fileId, metadata, as = user) => request(app).put(`/api/files/${fileId}/metadata`).send({ userId: String(as._id), metadata });
 
+describe('general documents (not about one employee)', () => {
+  test('an RFP or policy is filed under a general type without choosing an employee', async () => {
+    const f = await upload();
+    const r = await request(app)
+      .put(`/api/files/${f._id}/metadata`)
+      .send({ userId: uid(), metadata: { documentType: 'general.solicitations-and-contracts' } });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ metadataStatus: 'complete', metadata: { confidentialityLevel: 'Confidential' } });
+    // HR types still need the person
+    const g = await request(app).put(`/api/files/${f._id}/metadata`).send({ userId: uid(), metadata: { documentType: 'personnel.offer-letters' } });
+    expect(g.body.metadataStatus).not.toBe('complete');
+    expect(JSON.stringify(g.body)).toMatch(/Choose the employee or applicant/);
+  });
+});
+
 describe('taxonomy', () => {
-  test('seeded from the RFP: 10 record categories and their document types, plus the standard fields', async () => {
+  test('seeded from the RFP: 10 HR record categories + general documents and their document types, plus the standard fields', async () => {
     const t = (await request(app).get('/api/taxonomy')).body;
     expect(t.categories.map((c) => c.name)).toEqual([
       'Personnel', 'Benefits', 'Medical & Confidential', 'FMLA & Leave', 'ADA & Accommodation',
-      "Workers' Compensation", 'Employee Relations', 'Recruitment', 'Classification & Compensation', 'Training & Development',
+      "Workers' Compensation", 'Employee Relations', 'Recruitment', 'Classification & Compensation', 'Training & Development', 'General & reference documents',
     ]);
-    expect(t.documentTypes).toHaveLength(74);
+    expect(t.documentTypes).toHaveLength(79);
     expect(t.baseFields.map((f) => f.key)).toEqual(expect.arrayContaining(['documentType', 'person', 'effectiveDate', 'fiscalYear', 'confidentialityLevel', 'retentionCategory', 'caseNumber', 'positionNumber']));
     expect(t.documentTypes.find((d) => d.key === 'personnel.offer-letters').fields[0]).toMatchObject({ key: 'startDate', type: 'date', required: true });
     expect(t.documentTypes.find((d) => d.key === 'employee-relations.grievances').defaultConfidentiality).toBe('Restricted');
@@ -95,12 +110,12 @@ describe('taxonomy', () => {
 
   test('export → import round trip; replace mode deactivates (never deletes) missing types', async () => {
     const exported = (await request(app).get('/api/taxonomy/export')).body;
-    expect(exported.documentTypes).toHaveLength(74);
+    expect(exported.documentTypes).toHaveLength(79);
     const smaller = { categories: exported.categories, documentTypes: exported.documentTypes.slice(0, 10) };
     const r = await request(app).post('/api/taxonomy/import').send({ userId: String(admin._id), data: smaller, mode: 'replace' });
     expect(r.body).toMatchObject({ documentTypes: 10, mode: 'replace' });
     expect((await request(app).get('/api/taxonomy')).body.documentTypes).toHaveLength(10);
-    expect((await request(app).get('/api/taxonomy?all=1')).body.documentTypes).toHaveLength(74);
+    expect((await request(app).get('/api/taxonomy?all=1')).body.documentTypes).toHaveLength(79);
     const bad = await request(app).post('/api/taxonomy/import').send({ userId: String(admin._id), data: { categories: [], documentTypes: [{ key: 'x', name: 'X', categoryKey: 'nope' }] } });
     expect(bad.status).toBe(400);
     expect(bad.body.details[0]).toMatch(/unknown category "nope"/);

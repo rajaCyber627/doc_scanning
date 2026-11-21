@@ -95,6 +95,8 @@ const STAGES = [
         ...(extracted.ocr ? { ocr: extracted.ocr } : {}),
         // OCR quality problems replace earlier OCR reasons; other stages' reasons stay
         reviewReasons: [...(f.reviewReasons || []).filter((r) => r.stage !== 'ocr'), ...(extracted.reviewReasons || [])],
+        // page notes (blank / sideways pages in a readable document): shown, not blocking
+        notes: extracted.notes || [],
       };
     },
   },

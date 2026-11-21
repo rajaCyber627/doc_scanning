@@ -86,7 +86,7 @@ async function getPages(fileId, userId) {
     pageCount: a.pageCount,
     source: a.src.from,
     splittable: !isSplit(file) && !file.handoff && file.status !== 'processing',
-    reason: isSplit(file) ? 'Already split' : file.handoff ? 'Already sent to the HR system' : file.status === 'processing' ? 'Still processing' : null,
+    reason: isSplit(file) ? 'Already split' : file.handoff ? 'Already filed in the HR records system' : file.status === 'processing' ? 'Still processing' : null,
     pages: a.pages.map((p) => ({
       page: p.page,
       wordCount: p.wordCount,
