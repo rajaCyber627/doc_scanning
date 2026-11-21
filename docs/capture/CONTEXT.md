@@ -334,4 +334,6 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   owner), reconcile (accounted-for + hash verification), CSV reports; models MigrationRun/Item/
   Ledger). CLI `backend/scripts/migrate.js`; admin MigrationsPage `/migrations`. See
   `docs/capture/shared-drives.md`.
-- [ ] P17 Paper conversion method (document)
+- [x] P17 Paper conversion method (document) — `docs/capture/paper-conversion-method.md` (one-page
+  summary + 15 sections; LVA GS-03 / RM-3 / RM-25 and Code §§ 42.1-85, -86.01, -86.1 checked
+  21 Nov 2026; items needing confirmation marked ⚑).
