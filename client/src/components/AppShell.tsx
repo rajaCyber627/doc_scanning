@@ -95,7 +95,7 @@ export default function AppShell({
       <div className="body-grid">
         <aside className="sidebar">
           <div className="nav-section">Workspace</div>
-          {[...NAV, ...(isAdmin(user) ? [{ to: "/taxonomy", label: "Document types", icon: "☰", end: false }] : [])].map((n) => (
+          {[...NAV, ...(isAdmin(user) ? [{ to: "/taxonomy", label: "Document types", icon: "☰", end: false }, { to: "/migrations", label: "Migrations", icon: "⇪", end: false }] : [])].map((n) => (
             <NavLink
               key={n.to}
               to={n.to}

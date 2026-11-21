@@ -326,5 +326,12 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   documents/children.js skips exact-duplicate email attachments (AttachmentClaim unique, TTL 1h);
   documents/container.js isContainer/NOT_CONTAINER; hand-off serialized per document. Client
   EmailIntakeCard in Settings. See `docs/capture/email.md`.
-- [ ] P16 Import from shared drives
+- [x] P16 Import from shared drives — `features/migration` (sources local.js / sharepoint.js
+  (Graph drives, Sites.Selected); mapping.js pattern rules {EmployeeID}/{Category}/**, directory
+  check; service: createRun, inventory (hash, problems, in-source duplicates, by type/age), map
+  (dry run), migrate (test subset / production, rate limit, MigrationLedger unique claim →
+  idempotent, File.prefill → classification suggestion, metadata.migration keeps path/dates/
+  owner), reconcile (accounted-for + hash verification), CSV reports; models MigrationRun/Item/
+  Ledger). CLI `backend/scripts/migrate.js`; admin MigrationsPage `/migrations`. See
+  `docs/capture/shared-drives.md`.
 - [ ] P17 Paper conversion method (document)

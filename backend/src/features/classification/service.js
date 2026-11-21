@@ -149,7 +149,7 @@ function withoutStage(reasons) {
 async function runClassification(file) {
   const settings = await getSettings();
   // Details printed on a separator sheet (or chosen when splitting) are trusted hints.
-  const prefill = ((file.splitFrom || file.mergeOf || {}).prefill) || {};
+  const prefill = file.prefill || ((file.splitFrom || file.mergeOf || {}).prefill) || {};
   // email subject / body hints (P15): context for the AI, never facts
   const intakeHints = (file.metadata && file.metadata.intakeHints) || null;
   const hasPrefill = !!(prefill.documentType || prefill.employeeId || prefill.personId);

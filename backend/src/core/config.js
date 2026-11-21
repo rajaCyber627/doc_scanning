@@ -101,6 +101,11 @@ module.exports = {
     },
   },
 
+  // Shared-drive / SharePoint migration (P16)
+  migration: {
+    ratePerSec: Number(env.MIGRATION_RATE_PER_SEC || 5), // files per second (0 = no limit)
+  },
+
   duplicates: {
     // Estimated text similarity (0–1) at which two documents count as the same content
     contentSimilarity: Number(env.DUPLICATE_CONTENT_SIMILARITY || 0.75),

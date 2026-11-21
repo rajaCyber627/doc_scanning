@@ -91,6 +91,8 @@ const fileSchema = new mongoose.Schema(
     splitSuggestion: { type: mongoose.Schema.Types.Mixed, default: null }, // AI-suggested cuts
     // an email whose body has nothing worth filing: it only links its attachments (P15)
     containerOnly: { type: Boolean, default: false },
+    // trusted details known at capture (migration folder rules, P16): { documentType, personId | employeeId }
+    prefill: { type: mongoose.Schema.Types.Mixed, default: null },
     splitRemoved: { type: [Number], default: [] }, // pages of a split original left out (separators, blanks)
     // QC (P14): failed the quality check → { note, by, at }; the paper must be rescanned
     rescan: { type: mongoose.Schema.Types.Mixed, default: null },
