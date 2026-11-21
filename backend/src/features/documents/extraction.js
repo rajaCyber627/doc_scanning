@@ -12,7 +12,7 @@ const { typeForName, extOf } = require('../upload/fileTypes');
 const office = require('./formats/office');
 const { parseEml, parseMsg } = require('./formats/email');
 const { expandZip } = require('./formats/archive');
-const { toJpeg } = require('./formats/images');
+const { toJpeg, flattenPng } = require('./formats/images');
 const { assertSafeZipDocument } = require('./formats/zipSafety');
 
 const stripBom = (s) => s.replace(/^﻿/, '');
@@ -36,6 +36,16 @@ async function extractPdf(file, buf) {
 async function extractImage(type, file, buf) {
   // Multi-page TIFFs go straight to OCR (pages are handled by the provider).
   if (type.ext === 'tif' || type.ext === 'tiff') return runOcr(file);
+  if (type.ext === 'png') {
+    // transparent background → flatten onto white first (OCR would see a black page)
+    const flat = await flattenPng(buf);
+    if (flat) {
+      const key = `${file.s3Key}.converted.jpg`;
+      await storage.putStream(key, flat, 'image/jpeg');
+      await File.updateOne({ _id: file._id }, { ocrSourceS3Key: key });
+      return runOcr(file, { ocrKey: key, image: { buffer: flat, mime: 'image/jpeg' } });
+    }
+  }
   if (!type.convertForOcr) return runOcr(file, { image: { buffer: buf, mime: type.mime } });
   // HEIC / GIF / BMP: OCR (and browsers) need a JPEG; keep it next to the original and
   // record it right away so it is displayed and cleaned up even if OCR then fails.

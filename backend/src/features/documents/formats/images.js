@@ -7,9 +7,34 @@ const { UserFacingError } = require('../../../core/errors');
 
 const JPEG_QUALITY = 88;
 
+const hasTransparency = (img) => {
+  const d = img.bitmap.data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true;
+  return false;
+};
+
+/** Transparent areas become white. Without this, JPEG/OCR see them as black (their colour
+ *  value is usually 0,0,0), so black text on a transparent background reads as a blank page. */
+function onWhite(img) {
+  if (!hasTransparency(img)) return img;
+  return new Jimp(img.bitmap.width, img.bitmap.height, 0xffffffff).composite(img, 0, 0);
+}
+
 async function jimpToJpeg(img) {
-  img.quality(JPEG_QUALITY);
-  return img.getBufferAsync(Jimp.MIME_JPEG);
+  const flat = onWhite(img);
+  flat.quality(JPEG_QUALITY);
+  return flat.getBufferAsync(Jimp.MIME_JPEG);
+}
+
+/** PNG with transparency → JPEG on white (for OCR and viewing); null when fully opaque. */
+async function flattenPng(buffer) {
+  let img;
+  try {
+    img = await Jimp.read(buffer);
+  } catch {
+    return null; // unreadable here: let OCR try the original
+  }
+  return hasTransparency(img) ? jimpToJpeg(img) : null;
 }
 
 /** JPEG version of an image Textract/browsers can't read directly. */
@@ -46,4 +71,4 @@ async function tiffPagesToJpeg(buffer, maxPages) {
   return { pages, pageCount: ifds.length };
 }
 
-module.exports = { toJpeg, tiffPagesToJpeg };
+module.exports = { toJpeg, tiffPagesToJpeg, flattenPng };

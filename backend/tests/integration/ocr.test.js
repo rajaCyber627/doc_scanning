@@ -182,6 +182,24 @@ describe('image clean-up before OCR', () => {
     expect(fakes.__objects.get(f.s3Key).equals(fs.readFileSync(fixture('w4_scan.png')))).toBe(true); // original untouched
   });
 
+  test('a PNG with a transparent background is put on white before OCR (else it reads as a blank black page)', async () => {
+    const png = fs.readFileSync(fixture('w4_scan.png')); // black text on a transparent background
+    const f = await upload('w4_scan.png', png);
+    expect(f.ocrSourceS3Key).toBe(`${f.s3Key}.converted.jpg`);
+    expect(fakes.__textract.calls[0]).toBe(`${f.s3Key}.converted.jpg`);
+    const flat = await Jimp.read(fakes.__objects.get(f.ocrSourceS3Key));
+    const corner = Jimp.intToRGBA(flat.getPixelColor(2, 2));
+    expect([corner.r, corner.g, corner.b]).toEqual([255, 255, 255]); // background is white now
+    expect(fakes.__objects.get(f.s3Key).equals(png)).toBe(true); // the original is untouched
+  });
+
+  test('an opaque PNG is sent to OCR as it is', async () => {
+    const img = new Jimp(200, 100, 0xffffffff);
+    const f = await upload('opaque.png', await img.getBufferAsync(Jimp.MIME_PNG));
+    expect(f.ocrSourceS3Key).toBeNull();
+    expect(fakes.__textract.calls[0]).toBe(f.s3Key);
+  });
+
   test('a sideways phone photo (EXIF orientation 6) is turned upright before OCR', async () => {
     const img = await Jimp.read(fixture('w4_scan.png'));
     img.resize(300, 200);

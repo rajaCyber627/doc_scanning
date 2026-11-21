@@ -51,3 +51,19 @@ Set `OCR_FORMS=false` to use the cheaper text-only detection always.
 - Detected tables also go into `tablesCsv`, so Q&A can use them.
 - `GET /api/files/:id/geometry[?page=N]` returns word boxes for highlighting.
 - `POST /api/files/:id/review` accepts a "needs review" document.
+
+## Transparent images (fix, Nov 2026)
+
+PNG and GIF files with a transparent background (screenshots, exported forms, signature
+images) store transparent pixels as black with zero opacity. Viewers draw them as white, but
+OCR saw **black text on black** and reported a blank page. Such images are now put on a white
+background first (`formats/images.js` `flattenPng` / `onWhite`). The flattened copy is saved
+next to the original as `<key>.converted.jpg` and used for OCR and viewing; the original is
+never changed. Verified live with Textract: the transparent W-4 test image read at 98.7%
+confidence.
+
+## Live status
+
+Textract is **active** on the AWS account (checked 21 Nov 2026 with the keys in
+`backend/.env`, user `docapp-dev`, region us-east-1). Single images (`AnalyzeDocument`) and
+scanned PDFs (asynchronous `StartDocumentAnalysis` reading from the S3 bucket) both work.
