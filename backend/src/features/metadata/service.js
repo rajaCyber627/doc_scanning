@@ -6,7 +6,7 @@ const config = require('../../core/config');
 const events = require('../../core/events');
 const { NOT_CONTAINER } = require('../documents/container');
 const { emitAudit } = require('../../core/audit');
-const { viewerFor, isRestricted } = require('../../core/access');
+const { viewerFor, canView } = require('../../core/access');
 const { getPartner } = require('../../providers/partner');
 const File = require('../../models/File');
 const { RecordCategory, DocumentType } = require('./taxonomy.models');
@@ -183,7 +183,7 @@ async function loadVisible(fileId, userId) {
   if (!viewer) throw new MetadataError(400, 'A valid userId is required');
   const file = await File.findById(fileId);
   // restricted documents look like they don't exist to users without permission
-  if (!file || (isRestricted(file.confidentiality) && !viewer.canSeeRestricted)) throw new MetadataError(404, 'File not found');
+  if (!canView(viewer, file)) throw new MetadataError(404, 'File not found');
   return { file, viewer };
 }
 
@@ -268,7 +268,6 @@ async function nextIncomplete(userId, afterId) {
     metadataStatus: { $ne: 'complete' },
     supersededBy: null,
     ...NOT_CONTAINER,
-    ...(viewer.canSeeRestricted ? {} : { confidentiality: { $ne: 'restricted' } }),
   };
   if (afterId && mongoose.isValidObjectId(afterId)) q._id = { $ne: afterId };
   const next = await File.findOne(q).sort({ createdAt: 1 }).select('_id fileName').lean();

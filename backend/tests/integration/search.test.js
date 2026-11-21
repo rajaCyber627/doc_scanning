@@ -106,22 +106,20 @@ describe('full-text search', () => {
     expect(inBatch.batchId.equals(batch._id)).toBe(true);
   });
 
-  test('restricted documents are invisible (not even counted) without permission', async () => {
+  test('your own restricted documents are found; nobody else ever sees your documents', async () => {
     const f = await upload('doctor-note.txt', Buffer.from('Medical certification for John Smith, return to work 12/01'));
     await upload('evaluation.txt', fs.readFileSync(fixture('evaluation.txt')));
     await File.updateOne({ _id: f._id }, { confidentiality: 'restricted' });
     events.emit('document.changed', String(f._id));
     await settle();
 
-    const plain = await search({ q: 'smith' });
-    expect(plain.body.results.map((r) => r.fileName)).toEqual(['evaluation.txt']);
-    expect(plain.body.total).toBe(1);
-    expect((await search({ q: 'medical' })).body).toMatchObject({ total: 0, results: [] });
-    expect((await search({ q: 'medi' })).body).toMatchObject({ total: 0, results: [] }); // substring fallback too
-
-    await User.updateOne({ _id: user._id }, { permissions: ['restricted'] });
-    const allowed = await search({ q: 'smith' });
-    expect(allowed.body.total).toBe(2);
+    // the person who captured the restricted note still finds it
+    const mine = await search({ q: 'smith' });
+    expect(mine.body.results.map((r) => r.fileName).sort()).toEqual(['doctor-note.txt', 'evaluation.txt']);
+    expect((await search({ q: 'medi' })).body.total).toBe(1); // substring fallback too
+    // another staff member — even one with restricted access — never sees someone else's documents
+    const stranger = await User.create({ email: 'stranger@example.com', userName: 'stranger', password: 'x', permissions: ['restricted'] });
+    expect((await request(app).get(`/api/search?userId=${stranger._id}&q=smith`)).body).toMatchObject({ total: 0, results: [] });
   });
 
   test('the index follows changes: rename re-indexes, delete removes', async () => {

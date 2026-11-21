@@ -21,6 +21,7 @@ const { pdfPageTexts } = require('../../src/features/splitting/pages');
 const app = createApp();
 let user;
 let admin;
+let other; // staff member without restricted access who did not upload the document
 
 beforeAll(startDb);
 afterAll(stopDb);
@@ -30,6 +31,7 @@ beforeEach(async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   user = await User.create({ email: 'hr@example.com', userName: 'hr', password: 'x' });
   admin = await User.create({ email: 'admin@example.com', userName: 'admin', password: 'x', permissions: ['admin', 'restricted'] });
+  other = await User.create({ email: 'other@example.com', userName: 'other', password: 'x' });
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -268,11 +270,11 @@ describe('manual split', () => {
     expect(audit.details).toMatchObject({ via: 'manual', removedPages: [4], rotatedPages: [6] });
   });
 
-  test('a restricted original can only be split by permitted staff, and its parts stay restricted', async () => {
+  test('a restricted original is hidden from other staff, and its parts stay restricted', async () => {
     const f = await upload('medical.pdf', await pdf([...offerPages, ...electionPages]));
     await File.updateOne({ _id: f._id }, { confidentiality: 'restricted' });
     const parts = [{ from: 1, to: 3 }, { from: 4, to: 6 }];
-    expect((await request(app).post(`/api/files/${f._id}/split`).send({ userId: uid(), parts })).status).toBe(404);
+    expect((await request(app).post(`/api/files/${f._id}/split`).send({ userId: String(other._id), parts })).status).toBe(404); // other staff can't see it
     expect((await request(app).post(`/api/files/${f._id}/split`).send({ userId: String(admin._id), parts })).status).toBe(200);
     await settle();
     const kids = await File.find({ parentDocumentId: f._id });

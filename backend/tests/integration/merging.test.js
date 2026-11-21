@@ -18,6 +18,7 @@ const { pdfPageTexts } = require('../../src/features/splitting/pages');
 const app = createApp();
 let user;
 let admin;
+let other; // staff member without restricted access who did not upload the document
 
 beforeAll(startDb);
 afterAll(stopDb);
@@ -28,6 +29,7 @@ beforeEach(async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   user = await User.create({ email: 'hr@example.com', userName: 'hr', password: 'x' });
   admin = await User.create({ email: 'admin@example.com', userName: 'admin', password: 'x', permissions: ['admin', 'restricted'] });
+  other = await User.create({ email: 'other@example.com', userName: 'other', password: 'x' });
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -164,8 +166,8 @@ describe('details and confidentiality', () => {
     await File.updateOne({ _id: gen._id }, { confidentiality: 'general' });
     const pages = pagesOf(med, gen);
 
-    // a user without restricted access can't even see the medical page
-    expect((await request(app).post('/api/merge').send({ userId: uid(), pages })).status).toBe(404);
+    // other staff without restricted access can't even see the medical page
+    expect((await request(app).post('/api/merge').send({ userId: String(other._id), pages })).status).toBe(404);
 
     const pv = await request(app).post('/api/merge/preview').send({ userId: String(admin._id), fileIds: [med._id, gen._id] });
     expect(pv.body).toMatchObject({ mixedRestricted: true, confidentiality: 'restricted' });

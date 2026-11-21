@@ -3,7 +3,6 @@
 // If nothing matches a single short term, a substring match is tried so partial words
 // ("Smi") still find documents, like the old search did.
 const SearchDoc = require('../../models/SearchDoc');
-const { visibilityFilter } = require('../../core/access');
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -53,7 +52,8 @@ function pageAt(pages, index) {
 }
 
 function baseFilter(viewer, filters) {
-  const f = { userId: viewer.userId, status: { $in: ['ready', 'needs_review'] }, ...visibilityFilter(viewer) };
+  // the viewer's own documents — including their own restricted ones (core/access canView)
+  const f = { userId: viewer.userId, status: { $in: ['ready', 'needs_review'] } };
   if (filters.batchId) f.batchId = filters.batchId;
   if (filters.folderId) f.folderId = filters.folderId;
   if (filters.documentType) f.documentType = filters.documentType;

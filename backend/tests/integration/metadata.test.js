@@ -16,6 +16,7 @@ const UploadSession = require('../../src/features/upload/UploadSession.model');
 const app = createApp();
 let user;
 let admin;
+let other; // staff member without restricted access who did not upload the document
 
 beforeAll(startDb);
 afterAll(stopDb);
@@ -25,6 +26,7 @@ beforeEach(async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   user = await User.create({ email: 'hr@example.com', userName: 'hr', password: 'x' });
   admin = await User.create({ email: 'admin@example.com', userName: 'admin', password: 'x', permissions: ['admin', 'restricted'] });
+  other = await User.create({ email: 'other@example.com', userName: 'other', password: 'x' });
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -174,8 +176,8 @@ describe('metadata entry', () => {
     expect(r.body.metadata.confidentialityLevel).toBe('Restricted');
     expect((await File.findById(f._id)).confidentiality).toBe('restricted');
     await settle();
-    expect((await request(app).get(`/api/search?userId=${uid()}&q=smith`)).body.total).toBe(0);
-    expect((await save(f._id, { caseNumber: 'x' })).status).toBe(404); // looks like it doesn't exist
+    expect((await request(app).get(`/api/search?userId=${uid()}&q=smith`)).body.total).toBe(1); // the uploader still finds it
+    expect((await save(f._id, { caseNumber: 'x' }, other)).status).toBe(404); // other staff: looks like it doesn't exist
     expect((await save(f._id, { caseNumber: 'FMLA-26-015' }, admin)).status).toBe(200);
   });
 

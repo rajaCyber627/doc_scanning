@@ -11,7 +11,7 @@ const { PDFDocument, degrees } = require('pdf-lib');
 const config = require('../../core/config');
 const events = require('../../core/events');
 const { emitAudit } = require('../../core/audit');
-const { viewerFor, isRestricted } = require('../../core/access');
+const { viewerFor, canView } = require('../../core/access');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
 const Setting = require('../../models/Setting');
@@ -57,7 +57,7 @@ async function load(fileId, userId) {
   const viewer = await viewerFor(userId);
   if (!viewer) throw new SplitError(400, 'A valid userId is required');
   const file = await File.findById(fileId);
-  if (!file || (isRestricted(file.confidentiality) && !viewer.canSeeRestricted)) throw new SplitError(404, 'File not found');
+  if (!canView(viewer, file)) throw new SplitError(404, 'File not found');
   return file;
 }
 
@@ -404,7 +404,7 @@ async function keepWhole(fileId, userId) {
 async function lineage(fileId, userId) {
   const file = await load(fileId, userId);
   const viewer = await viewerFor(userId);
-  const visible = (f) => !isRestricted(f.confidentiality) || viewer.canSeeRestricted;
+  const visible = (f) => canView(viewer, f);
   const parts = isSplit(file)
     ? (await File.find({ _id: { $in: file.splitInto } }).select('fileName status confidentiality splitFrom').lean())
         .sort((a, b) => a.splitFrom.part - b.splitFrom.part)

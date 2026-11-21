@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const { PDFDocument, degrees } = require('pdf-lib');
 const events = require('../../core/events');
 const { emitAudit } = require('../../core/audit');
-const { viewerFor, isRestricted } = require('../../core/access');
+const { viewerFor, canView } = require('../../core/access');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
 const OcrPage = require('../ocr/OcrPage.model');
@@ -43,7 +43,7 @@ async function loadSources(fileIds, userId) {
   const byId = new Map(files.map((f) => [String(f._id), f]));
   return ids.map((id) => {
     const f = byId.get(id);
-    if (!f || (isRestricted(f.confidentiality) && !viewer.canSeeRestricted)) throw new MergeError(404, 'File not found');
+    if (!canView(viewer, f)) throw new MergeError(404, 'File not found');
     if (!['ready', 'needs_review'].includes(f.status)) throw new MergeError(409, `"${f.fileName}" has not finished processing`);
     if (f.supersededBy) throw new MergeError(409, `"${f.fileName}" has been replaced by a newer version`);
     if (f.splitInto && f.splitInto.length) throw new MergeError(409, `"${f.fileName}" was split — merge its parts instead`);

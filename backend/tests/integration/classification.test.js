@@ -16,6 +16,7 @@ const UploadSession = require('../../src/features/upload/UploadSession.model');
 const app = createApp();
 let user;
 let admin;
+let other; // staff member without restricted access who did not upload the document
 
 beforeAll(startDb);
 afterAll(stopDb);
@@ -25,6 +26,7 @@ beforeEach(async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   user = await User.create({ email: 'hr@example.com', userName: 'hr', password: 'x' });
   admin = await User.create({ email: 'admin@example.com', userName: 'admin', password: 'x', permissions: ['admin', 'restricted'] });
+  other = await User.create({ email: 'other@example.com', userName: 'other', password: 'x' });
   await Setting.create({ key: 'classification', value: { aiEnabled: true } });
 });
 afterEach(() => jest.restoreAllMocks());
@@ -151,9 +153,10 @@ describe('restricted-first routing', () => {
     expect((await request(app).get(`/api/review-queue?userId=${uid()}&queue=general`)).body).toEqual([]);
     expect((await request(app).get(`/api/review-queue?userId=${uid()}&queue=restricted`)).status).toBe(403);
     expect((await request(app).get(`/api/review-queue?userId=${admin._id}&queue=restricted`)).body).toHaveLength(1);
-    expect((await request(app).get(`/api/search?userId=${uid()}&q=medical`)).body.total).toBe(0);
-    // and a general user can't act on it
-    expect((await request(app).post(`/api/files/${f._id}/classification/accept`).send({ userId: uid() })).status).toBe(404);
+    // the uploader still finds and works on their own document…
+    expect((await request(app).get(`/api/search?userId=${uid()}&q=medical`)).body.total).toBe(1);
+    // …but other staff without restricted access can't even see it
+    expect((await request(app).post(`/api/files/${f._id}/classification/accept`).send({ userId: String(other._id) })).status).toBe(404);
   });
 
   test('when the AI is unsure about confidentiality, the record goes to the restricted queue', async () => {
@@ -166,7 +169,8 @@ describe('restricted-first routing', () => {
   test('releasing to the general queue needs restricted access', async () => {
     fakes.__classifyReplies.push(answer({ restrictedLikely: true }));
     const f = await upload('offer.docx', offer());
-    expect((await request(app).post(`/api/files/${f._id}/classification/reassign`).send({ userId: uid(), queue: 'general' })).status).toBe(404); // can't even see it
+    expect((await request(app).post(`/api/files/${f._id}/classification/reassign`).send({ userId: String(other._id), queue: 'general' })).status).toBe(404); // can't even see it
+    expect((await request(app).post(`/api/files/${f._id}/classification/reassign`).send({ userId: uid(), queue: 'general' })).status).toBe(403); // the uploader sees it, but may not release it
     const r = await request(app).post(`/api/files/${f._id}/classification/reassign`).send({ userId: String(admin._id), queue: 'general' });
     expect(r.body.queue).toBe('general');
     expect((await File.findById(f._id)).confidentiality).toBe('confidential');

@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 const events = require('../../core/events');
 const config = require('../../core/config');
 const { emitAudit } = require('../../core/audit');
-const { viewerFor, isRestricted } = require('../../core/access');
+const { viewerFor, isRestricted, canView } = require('../../core/access');
 const { getPartner } = require('../../providers/partner');
 const File = require('../../models/File');
 const Setting = require('../../models/Setting');
@@ -260,7 +260,7 @@ async function loadForReview(fileId, userId) {
   const viewer = await viewerFor(userId);
   if (!viewer) throw new ClassificationError(400, 'A valid userId is required');
   const file = await File.findById(fileId);
-  if (!file || (isRestricted(file.confidentiality) && !viewer.canSeeRestricted)) throw new ClassificationError(404, 'File not found');
+  if (!canView(viewer, file)) throw new ClassificationError(404, 'File not found');
   return { file, viewer };
 }
 

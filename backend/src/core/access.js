@@ -1,7 +1,8 @@
 // Who is asking, and what may they see. Until Entra ID SSO + roles arrive, permissions
 // live on the User record (User.permissions). The one rule enforced everywhere today:
 // restricted records (medical, FMLA, ADA, workers' comp, ER investigations, grievances)
-// are invisible — not even counted — to users without the "restricted" permission.
+// are invisible — not even counted — to other users without the "restricted" permission
+// (the person who captured a document can always see it: canView).
 const mongoose = require('mongoose');
 const User = require('../models/User');
 
@@ -29,4 +30,12 @@ function visibilityFilter(viewer, field = 'confidentiality') {
 
 const isRestricted = (level) => RESTRICTED_LEVELS.includes(level);
 
-module.exports = { viewerFor, visibilityFilter, isRestricted, RESTRICTED_PERMISSION, RESTRICTED_LEVELS };
+/**
+ * May this viewer see this document? Restricted records are hidden from other staff
+ * without the permission — never from the person who captured the document (they have
+ * already seen it; locking them out of their own upload helps no one).
+ */
+const canView = (viewer, file) =>
+  !!viewer && !!file && (!isRestricted(file.confidentiality) || viewer.canSeeRestricted || String(file.userId) === String(viewer.userId));
+
+module.exports = { viewerFor, visibilityFilter, isRestricted, canView, RESTRICTED_PERMISSION, RESTRICTED_LEVELS };
