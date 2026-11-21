@@ -57,7 +57,8 @@ Set `OCR_FORMS=false` to use the cheaper text-only detection always.
 PNG and GIF files with a transparent background (screenshots, exported forms, signature
 images) store transparent pixels as black with zero opacity. Viewers draw them as white, but
 OCR saw **black text on black** and reported a blank page. Such images are now put on a white
-background first (`formats/images.js` `flattenPng` / `onWhite`). The flattened copy is saved
+background first (`formats/images.js` `flattenPng` / `onWhite`; TIFFs with transparent pages via
+`flattenTiff`, which OCRs a PDF copy `<key>.converted.pdf`). The flattened copy is saved
 next to the original as `<key>.converted.jpg` and used for OCR and viewing; the original is
 never changed. Verified live with Textract: the transparent W-4 test image read at 98.7%
 confidence.

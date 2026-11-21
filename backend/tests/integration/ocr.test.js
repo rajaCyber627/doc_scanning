@@ -193,6 +193,19 @@ describe('image clean-up before OCR', () => {
     expect(fakes.__objects.get(f.s3Key).equals(png)).toBe(true); // the original is untouched
   });
 
+  test('a TIFF with transparent pages is read from a PDF copy on white', async () => {
+    // a TIFF made from the W-4 image, keeping its transparent background (under 1 MB)
+    const UTIF = require('utif');
+    const src = (await Jimp.read(fixture('w4_scan.png'))).resize(300, Jimp.AUTO);
+    const tif = Buffer.from(UTIF.encodeImage(new Uint8Array(src.bitmap.data), src.bitmap.width, src.bitmap.height));
+    expect(tif.length).toBeLessThan(1024 * 1024);
+    const f = await upload('w4.tif', tif);
+    expect(f.ocrSourceS3Key).toBe(`${f.s3Key}.converted.pdf`);
+    expect(fakes.__textract.calls[0]).toBe(`${f.s3Key}.converted.pdf`);
+    expect(fakes.__objects.get(f.ocrSourceS3Key).subarray(0, 5).toString()).toBe('%PDF-');
+    expect(fakes.__objects.get(f.s3Key).equals(tif)).toBe(true); // original untouched
+  });
+
   test('an opaque PNG is sent to OCR as it is', async () => {
     const img = new Jimp(200, 100, 0xffffffff);
     const f = await upload('opaque.png', await img.getBufferAsync(Jimp.MIME_PNG));

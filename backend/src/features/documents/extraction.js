@@ -4,6 +4,7 @@
 // `children` (emails, archives) are created as their own documents by the intake stage.
 const mammoth = require('mammoth');
 const { parsePdf } = require('./formats/pdfText');
+const config = require('../../core/config');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
 const { runOcr } = require('../ocr/service');
@@ -12,7 +13,7 @@ const { typeForName, extOf } = require('../upload/fileTypes');
 const office = require('./formats/office');
 const { parseEml, parseMsg } = require('./formats/email');
 const { expandZip } = require('./formats/archive');
-const { toJpeg, flattenPng } = require('./formats/images');
+const { toJpeg, flattenPng, flattenTiff } = require('./formats/images');
 const { assertSafeZipDocument } = require('./formats/zipSafety');
 
 const stripBom = (s) => s.replace(/^﻿/, '');
@@ -35,7 +36,15 @@ async function extractPdf(file, buf) {
 
 async function extractImage(type, file, buf) {
   // Multi-page TIFFs go straight to OCR (pages are handled by the provider).
-  if (type.ext === 'tif' || type.ext === 'tiff') return runOcr(file);
+  if (type.ext === 'tif' || type.ext === 'tiff') {
+    // transparent pages → a PDF copy on white is read instead (OCR would see black pages)
+    const flat = await flattenTiff(buf, config.formats.maxRenditionPages);
+    if (!flat) return runOcr(file);
+    const key = `${file.s3Key}.converted.pdf`;
+    await storage.putStream(key, flat, 'application/pdf');
+    await File.updateOne({ _id: file._id }, { ocrSourceS3Key: key });
+    return runOcr(file, { ocrKey: key });
+  }
   if (type.ext === 'png') {
     // transparent background → flatten onto white first (OCR would see a black page)
     const flat = await flattenPng(buf);

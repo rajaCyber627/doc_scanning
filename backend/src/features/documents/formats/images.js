@@ -71,4 +71,30 @@ async function tiffPagesToJpeg(buffer, maxPages) {
   return { pages, pageCount: ifds.length };
 }
 
-module.exports = { toJpeg, tiffPagesToJpeg, flattenPng };
+/** A TIFF with transparency → PDF of its pages on white (for OCR); null when opaque. */
+async function flattenTiff(buffer, maxPages) {
+  let ifds;
+  try {
+    ifds = UTIF.decode(buffer);
+  } catch {
+    return null; // unreadable here: let OCR try the original
+  }
+  let transparent = false;
+  for (const ifd of ifds.slice(0, maxPages)) {
+    UTIF.decodeImage(buffer, ifd);
+    if (!ifd.width || !ifd.height) continue;
+    const rgba = UTIF.toRGBA8(ifd);
+    for (let i = 3; i < rgba.length; i += 4)
+      if (rgba[i] < 255) {
+        transparent = true;
+        break;
+      }
+    if (transparent) break;
+  }
+  if (!transparent) return null;
+  const { pages } = await tiffPagesToJpeg(buffer, maxPages); // each page put on white
+  const { imagesToPdf } = require('./pdfBuilder');
+  return (await imagesToPdf(pages)).pdf;
+}
+
+module.exports = { toJpeg, tiffPagesToJpeg, flattenPng, flattenTiff };

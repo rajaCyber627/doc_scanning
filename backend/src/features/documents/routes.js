@@ -223,7 +223,7 @@ router.get('/api/files/:id/preview', async (req, res) => {
     let key = null;
     let type = null;
     if (file.renditionS3Key) [key, type] = [file.renditionS3Key, 'application/pdf'];
-    else if (file.ocrSourceS3Key) [key, type] = [file.ocrSourceS3Key, 'image/jpeg'];
+    else if (file.ocrSourceS3Key) [key, type] = [file.ocrSourceS3Key, /\.pdf$/i.test(file.ocrSourceS3Key) ? 'application/pdf' : 'image/jpeg'];
     else if (/^(application\/pdf|image\/(png|jpeg))$/.test(file.mimeType || '')) [key, type] = [file.s3Key, file.mimeType];
     if (!key) return res.status(404).json({ message: 'No preview for this document' });
     res.setHeader('Content-Type', type);
