@@ -15,8 +15,9 @@ const OcrPage = require('../ocr/OcrPage.model');
 const { indexDocument, syncToPartner } = require('../search/indexer');
 const { checkDuplicates } = require('../duplicates/service');
 const { runClassification } = require('../classification/service');
-const { autoSplit, aiSplitForBatch, hasSplitSuggestion, isSplit } = require('../splitting/service');
+const { autoSplit, aiSplitForBatch, hasSplitSuggestion } = require('../splitting/service');
 const { partText } = require('../splitting/partText');
+const { isContainer } = require('../documents/container');
 
 /**
  * Keep the stored text under MongoDB's 16 MB document limit: very long text is saved
@@ -122,9 +123,9 @@ const STAGES = [
     name: 'dedupe',
     blocking: true,
     // Same file / same content already captured (hub or partner)? → needs review.
-    // A split original is represented by its parts.
+    // A container (split original, email kept only for its attachments) is not checked.
     async run(ctx) {
-      return isSplit(ctx.file) ? undefined : checkDuplicates(ctx.file);
+      return isContainer(ctx.file) ? undefined : checkDuplicates(ctx.file);
     },
   },
   {
@@ -133,7 +134,7 @@ const STAGES = [
     // AI suggestions for type / person / confidentiality / details → review queue.
     async run(ctx) {
       // a split original is represented by its parts; a suggested split waits for a person
-      return isSplit(ctx.file) || hasSplitSuggestion(ctx.file) ? undefined : runClassification(ctx.file);
+      return isContainer(ctx.file) || hasSplitSuggestion(ctx.file) ? undefined : runClassification(ctx.file);
     },
   },
   {

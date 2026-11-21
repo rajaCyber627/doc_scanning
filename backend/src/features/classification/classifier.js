@@ -3,6 +3,7 @@
 // Document text is never logged.
 const { anthropic } = require('../../providers/llm/client');
 const config = require('../../core/config');
+const { hintText } = require('../emailintake/hints');
 
 const CONF_LEVELS = ['General', 'Confidential', 'Restricted'];
 const nullable = (type) => ({ type: [type, 'null'] });
@@ -110,7 +111,7 @@ function validateAnswer(a) {
 
 class ClassificationFailed extends Error {}
 
-async function callModel({ system, text }) {
+async function callModel({ system, text, hints = '' }) {
   const response = await anthropic.beta.messages.create({
     model: config.models.classify,
     max_tokens: 4000,
@@ -119,7 +120,7 @@ async function callModel({ system, text }) {
     fallbacks: 'default',
     output_config: { effort: config.classification.effort, format: { type: 'json_schema', schema: SCHEMA } },
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: `Classify this document.\n\n<document>\n${text}\n</document>` }],
+    messages: [{ role: 'user', content: `${hints}Classify this document.\n\n<document>\n${text}\n</document>` }],
   });
   if (response.stop_reason === 'refusal') throw new ClassificationFailed('The AI declined to classify this document');
   if (response.stop_reason === 'max_tokens') throw new ClassificationFailed('The AI answer was cut off');
@@ -139,13 +140,13 @@ async function callModel({ system, text }) {
  * Classify a document. Retries once on an invalid answer.
  * @returns {{ answer, model, truncated }}
  */
-async function classify({ taxonomy, fieldGuide, pages, rawText }) {
+async function classify({ taxonomy, fieldGuide, pages, rawText, hints = null }) {
   const system = systemPrompt(taxonomy, fieldGuide);
   const { text, truncated } = documentText(pages, rawText);
   let lastError;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const { answer, model } = await callModel({ system, text });
+      const { answer, model } = await callModel({ system, text, hints: hintText(hints) });
       answer.confidence = {
         documentType: clamp(answer.confidence.documentType),
         person: clamp(answer.confidence.person),

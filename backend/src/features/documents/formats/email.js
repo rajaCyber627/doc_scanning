@@ -64,8 +64,10 @@ async function parseEml(buffer) {
     to: addressList(mail.to),
     cc: addressList(mail.cc),
     date: mail.date ? mail.date.toISOString() : '',
+    messageId: mail.messageId || '',
   };
-  return { text: `${headerBlock(headers)}\n\n${body}`.trim(), children, skipped, email: headers };
+  const auth = mail.headers && mail.headers.get('authentication-results');
+  return { text: `${headerBlock(headers)}\n\n${body}`.trim(), children, skipped, email: headers, authResults: [].concat(auth || []).join(' ') };
 }
 
 async function parseMsg(buffer) {
@@ -92,6 +94,7 @@ async function parseMsg(buffer) {
     from: senderAddr ? `${data.senderName || ''} <${senderAddr}>`.trim() : data.senderName,
     to: recipients.join(', '),
     date: data.messageDeliveryTime || data.clientSubmitTime || '',
+    messageId: data.internetMessageId || data.messageId || '',
   };
   const body = (data.body && String(data.body).trim()) || htmlToText(data.bodyHtml);
   const children = [];

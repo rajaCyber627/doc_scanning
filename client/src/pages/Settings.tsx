@@ -12,6 +12,7 @@ import {
 } from "../api";
 
 import ScannerFoldersCard from "../features/scan/ScannerFoldersCard";
+import EmailIntakeCard from "../features/email/EmailIntakeCard";
 
 export default function Settings() {
   const user = getUser()!;
@@ -201,6 +202,7 @@ export default function Settings() {
       </div>
 
       {isAdmin && <ScannerFoldersCard userId={user._id} />}
+      {isAdmin && <EmailIntakeCard userId={user._id} />}
 
       <div className="card">
         <div className="card-header">Appearance</div>

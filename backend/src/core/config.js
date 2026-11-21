@@ -87,6 +87,20 @@ module.exports = {
     maxFilesPerPoll: int(env.HOTFOLDER_MAX_FILES, 200),
   },
 
+  // Email intake (P15): a shared mailbox (Microsoft Graph) or a local folder of .eml files
+  emailIntake: {
+    source: ['graph', 'local'].includes(env.EMAIL_INTAKE_SOURCE) ? env.EMAIL_INTAKE_SOURCE : '', // '' = off
+    pollSec: int(env.EMAIL_POLL_SEC, 60),
+    localDir: env.EMAIL_LOCAL_DIR || '',
+    maxPerPoll: int(env.EMAIL_MAX_PER_POLL, 50),
+    graph: {
+      tenantId: env.GRAPH_TENANT_ID || '',
+      clientId: env.GRAPH_CLIENT_ID || '',
+      clientSecret: env.GRAPH_CLIENT_SECRET || '', // never logged
+      mailbox: env.GRAPH_MAILBOX || '', // e.g. hr-intake@portsmouthva.gov
+    },
+  },
+
   duplicates: {
     // Estimated text similarity (0–1) at which two documents count as the same content
     contentSimilarity: Number(env.DUPLICATE_CONTENT_SIMILARITY || 0.75),

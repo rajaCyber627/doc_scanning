@@ -2,11 +2,13 @@
 // Each child is checked like an upload (type, real content, size); programs and
 // scripts are never imported. Re-running is safe: children are keyed by position.
 const path = require('path');
+const crypto = require('crypto');
 const config = require('../../core/config');
 const events = require('../../core/events');
 const { emitAudit } = require('../../core/audit');
 const storage = require('../../providers/storage');
 const File = require('../../models/File');
+const AttachmentClaim = require('../emailintake/AttachmentClaim.model');
 const { typeForName, contentMatches, mismatchReason, isExecutableName } = require('../upload/fileTypes');
 
 const safeKeyName = (name) => String(name).replace(/[^\w.\- ]+/g, '_').slice(-150);
@@ -42,6 +44,27 @@ async function createChildren(parent, children, preSkipped = []) {
       continue;
     }
 
+    // e-mailed files (P15): a forwarded copy of a file already in the system is not stored again
+    const digest = crypto.createHash('sha256').update(buf).digest('hex');
+    const dedupe = parent.source === 'email';
+    if (dedupe) {
+      const same = await File.findOne({ sha256: digest, supersededBy: null, parentDocumentId: { $ne: parent._id } }).select('fileName').lean();
+      if (same) {
+        skipped.push({ name, reason: `Already captured — same file as "${same.fileName}"` });
+        continue;
+      }
+      // two emails carrying the same file processed at once: only one may claim it
+      try {
+        await AttachmentClaim.init(); // the unique index must exist before it can decide
+        await AttachmentClaim.create({ sha256: digest });
+      } catch (e) {
+        if (e && e.code === 11000 && !(await File.exists({ parentDocumentId: parent._id, sha256: digest }))) {
+          skipped.push({ name, reason: 'Already captured — the same file arrived in another email at the same time' });
+          continue;
+        }
+        if (!e || e.code !== 11000) throw e;
+      }
+    }
     const key = `${parent.s3Key}.parts/${String(i).padStart(3, '0')}-${safeKeyName(name)}`;
     if (await File.exists({ parentDocumentId: parent._id, s3Key: key })) {
       created++;
@@ -60,7 +83,13 @@ async function createChildren(parent, children, preSkipped = []) {
       status: 'processing',
       parentDocumentId: parent._id,
       containerDepth: depth,
-      metadata: ch.path && ch.path !== name ? { sourcePath: ch.path } : {},
+      metadata: {
+        ...(ch.path && ch.path !== name ? { sourcePath: ch.path } : {}),
+        // email subject / body hints travel with each attachment (classification context)
+        ...(parent.metadata && parent.metadata.intakeHints ? { intakeHints: parent.metadata.intakeHints } : {}),
+      },
+      ...(parent.confidentiality === 'restricted' ? { confidentiality: 'restricted' } : {}),
+      sha256: digest,
     });
     created++;
     await emitAudit({

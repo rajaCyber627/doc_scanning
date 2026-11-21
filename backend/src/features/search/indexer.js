@@ -10,6 +10,7 @@ const events = require('../../core/events');
 const { emitAudit } = require('../../core/audit');
 const { getPartner } = require('../../providers/partner');
 const File = require('../../models/File');
+const { isContainer } = require('../documents/container');
 const SearchDoc = require('../../models/SearchDoc');
 const OcrPage = require('../ocr/OcrPage.model');
 
@@ -69,7 +70,7 @@ async function textWithPages(file) {
 async function indexDocument(fileId) {
   const file = await File.findById(fileId).lean();
   // superseded versions leave search; the current version replaces them
-  if (!file || !SEARCHABLE.includes(file.status) || file.supersededBy || (file.splitInto && file.splitInto.length)) {
+  if (!file || !SEARCHABLE.includes(file.status) || file.supersededBy || isContainer(file)) {
     await SearchDoc.deleteOne({ fileId });
     return null;
   }
@@ -147,10 +148,22 @@ function buildPayload(file, sd) {
   };
 }
 
-async function syncToPartner(fileId) {
+// One hand-off per document at a time: a second request (accept + change event arriving
+// together) waits, then re-reads the document — the partner never gets two creates.
+const handoffChains = new Map();
+function syncToPartner(fileId) {
+  const key = String(fileId);
+  const prev = handoffChains.get(key) || Promise.resolve();
+  const next = prev.catch(() => {}).then(() => syncOnce(fileId));
+  handoffChains.set(key, next);
+  next.finally(() => handoffChains.get(key) === next && handoffChains.delete(key)).catch(() => {});
+  return next;
+}
+
+async function syncOnce(fileId) {
   const file = await File.findById(fileId).lean();
   if (!file || file.status !== 'ready' || file.supersededBy) return null; // not ready, or an old version
-  if (file.splitInto && file.splitInto.length) return null; // split: its parts are sent instead
+  if (isContainer(file)) return null; // split original / attachment-only email: its parts are sent instead
   // the system of record needs the standard metadata: hold back until it is complete
   if (config.metadata.requiredForHandoff && file.metadataStatus !== 'complete') return null;
   const sd = await SearchDoc.findOne({ fileId: file._id }).lean();

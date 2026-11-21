@@ -317,6 +317,14 @@ Original pre-P01 references (line numbers now refer to the old file, kept for hi
   waits) + keepWhole; hot folder sub-folder = box ID → scan batch. Client ScanBatchView (on
   BatchPage for scan batches), start form on BatchesPage, camera `?batch=`, SplitPage "Keep as
   one document". See `docs/capture/batch-scanning.md`.
-- [ ] P15 Email capture
+- [x] P15 Email capture — `features/emailintake` (EmailSource: sources/local.js (.eml folder) +
+  sources/graph.js (client credentials, list/fetch MIME/move to Inbox/Processed|Rejected);
+  service: Message-ID dedupe, allow-list (Setting 'emailintake', empty = reject all), DMARC fail
+  reject, store as source=email File (P05 makes body + attachment documents), containerOnly when
+  the body says nothing, intakeHints → classifier <email_hints> (restricted words protective),
+  daily batch, EmailIntakeLog, audit without body; scheduler from backend/app.js).
+  documents/children.js skips exact-duplicate email attachments (AttachmentClaim unique, TTL 1h);
+  documents/container.js isContainer/NOT_CONTAINER; hand-off serialized per document. Client
+  EmailIntakeCard in Settings. See `docs/capture/email.md`.
 - [ ] P16 Import from shared drives
 - [ ] P17 Paper conversion method (document)

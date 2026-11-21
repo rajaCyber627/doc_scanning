@@ -8,6 +8,7 @@
 const mongoose = require('mongoose');
 const config = require('../../core/config');
 const events = require('../../core/events');
+const { NOT_CONTAINER } = require('../documents/container');
 const { emitAudit } = require('../../core/audit');
 const { viewerFor, isRestricted } = require('../../core/access');
 const { getPartner } = require('../../providers/partner');
@@ -60,7 +61,7 @@ function reasonFor(match, file, canSeeRestricted) {
 async function checkDuplicates(file) {
   const fp = fingerprint(file.rawText);
   // a split original and the file a part was cut from are never "duplicates" of it
-  const base = { _id: { $nin: [file._id, ...(file.derivedFrom || [])] }, status: { $in: LIVE }, supersededBy: null, 'splitInto.0': { $exists: false } };
+  const base = { _id: { $nin: [file._id, ...(file.derivedFrom || [])] }, status: { $in: LIVE }, supersededBy: null, ...NOT_CONTAINER };
   const fields = '_id fileName createdAt userId batchId confidentiality minhash numberTokens handoff';
   const found = new Map(); // fileId → match (exact beats content)
   const add = (o, kind, sim) => {

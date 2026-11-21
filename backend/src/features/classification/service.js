@@ -150,6 +150,8 @@ async function runClassification(file) {
   const settings = await getSettings();
   // Details printed on a separator sheet (or chosen when splitting) are trusted hints.
   const prefill = ((file.splitFrom || file.mergeOf || {}).prefill) || {};
+  // email subject / body hints (P15): context for the AI, never facts
+  const intakeHints = (file.metadata && file.metadata.intakeHints) || null;
   const hasPrefill = !!(prefill.documentType || prefill.employeeId || prefill.personId);
   if (!settings.aiEnabled && !hasPrefill) return { classification: { status: 'disabled', at: new Date() } };
   const pages = await OcrPage.find({ fileId: file._id }).select('page text').sort({ page: 1 }).lean();
@@ -159,7 +161,7 @@ async function runClassification(file) {
   const tax = await metadata.getTaxonomy();
   let result;
   try {
-    result = settings.aiEnabled && hasText ? await classify({ taxonomy: tax, fieldGuide: fieldGuide(tax), pages, rawText: file.rawText }) : fromPrefill(prefill, tax);
+    result = settings.aiEnabled && hasText ? await classify({ taxonomy: tax, fieldGuide: fieldGuide(tax), pages, rawText: file.rawText, hints: intakeHints }) : fromPrefill(prefill, tax);
   } catch (e) {
     if (!(e instanceof ClassificationFailed)) throw e;
     await emitAudit({ userId: file.userId, action: 'classification.failed', documentId: file._id, details: { error: e.message } });
@@ -196,7 +198,9 @@ async function runClassification(file) {
     unsureConfidentiality ||
     // already restricted (part of a restricted original, a merge with restricted pages…):
     // only a permitted person may lower it, never the AI
-    isRestricted(file.confidentiality);
+    isRestricted(file.confidentiality) ||
+    // the email mentioned FMLA / medical / an investigation… (protective only)
+    !!(intakeHints && intakeHints.restricted);
   const suggestion = {
     documentType: type ? type.key : null,
     documentTypeName: type ? type.name : null,

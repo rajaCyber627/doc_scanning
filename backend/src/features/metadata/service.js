@@ -4,6 +4,7 @@
 const mongoose = require('mongoose');
 const config = require('../../core/config');
 const events = require('../../core/events');
+const { NOT_CONTAINER } = require('../documents/container');
 const { emitAudit } = require('../../core/audit');
 const { viewerFor, isRestricted } = require('../../core/access');
 const { getPartner } = require('../../providers/partner');
@@ -257,7 +258,7 @@ async function nextIncomplete(userId, afterId) {
     status: { $in: ['ready', 'needs_review'] },
     metadataStatus: { $ne: 'complete' },
     supersededBy: null,
-    'splitInto.0': { $exists: false },
+    ...NOT_CONTAINER,
     ...(viewer.canSeeRestricted ? {} : { confidentiality: { $ne: 'restricted' } }),
   };
   if (afterId && mongoose.isValidObjectId(afterId)) q._id = { $ne: afterId };
