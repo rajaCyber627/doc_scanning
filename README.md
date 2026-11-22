@@ -120,17 +120,20 @@ Browser ──▶ Vercel (static React SPA + /api proxy)
 
 ```
 backend/
-  app.js                    Express app: all routes, extraction, Claude + Voyage calls
-  connection.js             Mongo connection (MONGO_URI)
-  mailer.js                 nodemailer transport + OTP / notice email templates
-  backfill-embeddings.js    one-time script to embed existing documents
-  userModel.js              User (auth, 2FA, custom instructions)
-  File.js                   uploaded document (text, OCR geometry, overview, tags, status)
-  Folder.js                 a set / folder of documents
-  TableResult.js            a saved answer/table (single- or multi-file)
-  SavedPrompt.js            a reusable named prompt
-  Chunk.js                  a text chunk + embedding (for vector search)
+  app.js                    entry point: connect DB, resume processing, start server
+  src/
+    app.js                  builds the Express app and mounts every feature's routes
+    core/                   config, db, job queue, error messages, audit trail
+    providers/              outside services: storage (S3), ocr (Textract), llm (Claude),
+                            embeddings (Voyage), email (SMTP), partner (HRDMS adapter)
+    models/                 shared records: File, User, Folder, Batch
+    features/               one folder per feature (routes + logic + own models):
+                            auth, prompts, documents, intake (processing pipeline),
+                            folders, tables, search, query
+  scripts/                  one-off scripts (backfill-embeddings, migrate-hash-passwords)
+  tests/                    unit/ and integration/ (Jest); run `npm test`
   public/                   built SPA (only used when the backend serves the UI directly)
+docs/capture/               Capture Hub scope, rules and implementation prompts
 client/
   src/pages/                Overview, Documents, FilePage, FolderPage, TablePage, Tables,
                             AskPage, Settings, Login, Signup, Landing
@@ -200,7 +203,7 @@ PORT=9000
 2. **Backfill embeddings** for documents uploaded before this was enabled:
    ```bash
    cd backend
-   node backfill-embeddings.js
+   node scripts/backfill-embeddings.js
    ```
    It's idempotent-safe to re-run. New uploads embed automatically at ingest.
 
@@ -301,8 +304,9 @@ The instance runs Node/Express under **pm2** as process **`docp`**, using the
 
 ```bash
 # copy changed backend files up (the EC2 checkout is NOT a git repo — copy, don't pull)
-scp -i "<key>.pem" backend/app.js backend/package.json backend/package-lock.json \
+scp -i "<key>.pem" -r backend/app.js backend/src backend/scripts backend/package.json backend/package-lock.json \
     ec2-user@<ec2-host>:/home/ec2-user/DocP-Document-Parsing/backend/
+# note: the backend now lives in backend/src — copying app.js alone is no longer enough
 
 # on the box: install any new deps, restart, verify
 ssh -i "<key>.pem" ec2-user@<ec2-host>

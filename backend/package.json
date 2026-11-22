@@ -4,24 +4,62 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "test": "jest --runInBand",
+    "start": "node app.js",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest --runInBand tests/integration"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
+    "@kenjiuno/msgreader": "^1.29.0",
     "aws-sdk": "^2.1603.0",
     "axios": "^1.6.8",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exif-parser": "^0.1.12",
     "express": "^4.19.2",
+    "heic-convert": "^2.1.0",
+    "jimp": "^0.22.12",
+    "jsqr": "^1.4.0",
+    "jszip": "^3.10.2",
+    "mailparser": "^3.15.0",
     "mammoth": "^1.12.0",
     "mongoose": "^8.3.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^9.0.3",
-    "pdf-parse": "^1.1.1"
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "qrcode": "^1.5.4",
+    "utif": "^3.1.0",
+    "word-extractor": "^1.0.4",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.4.3",
+    "supertest": "^7.3.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/tests/support/setupEnv.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/support/mockProviders.js"
+    ],
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "testTimeout": 60000
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

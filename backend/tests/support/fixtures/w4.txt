@@ -1,0 +1,11 @@
+Form W-4 (2025) Employee Withholding Certificate
+Employee: Carlos Rivera
+Employee ID: 3310
+Department: Finance
+Filing status: Married filing jointly
+Dependents: 2
+Extra withholding: $50 per pay period
+Signed: January 15, 2025
+This certificate is used by the City payroll office to calculate
+federal income tax withholding. Changes to filing status must be
+reported to Human Resources within ten days of the change.

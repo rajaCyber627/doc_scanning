@@ -1,14 +1,21 @@
-import { ReactNode, useState } from "react";
-import { NavLink, useNavigate, Link } from "react-router-dom";
-import { getUser, logout } from "../auth";
+import { ReactNode, useEffect, useState } from "react";
+import { NavLink, useNavigate, Link, useLocation } from "react-router-dom";
+import axios from "axios";
+import { getUser, logout, setUser } from "../auth";
 
 const NAV = [
   { to: "/", label: "Overview", icon: "▚", end: true },
   { to: "/ask", label: "Ask everything", icon: "🔎" },
   { to: "/documents", label: "Documents", icon: "▤" },
+  { to: "/scan", label: "Scan with camera", icon: "📷" },
+  { to: "/batches", label: "Batches", icon: "🗂" },
+  { to: "/review", label: "Review queue", icon: "✓" },
   { to: "/tables", label: "Saved tables", icon: "▦" },
   { to: "/settings", label: "Settings", icon: "⚙" },
 ];
+
+// Admin-only pages are hidden from others (the server enforces it as well).
+const isAdmin = (u: ReturnType<typeof getUser>) => !!u && (u.role === "admin" || (u.permissions || []).includes("admin"));
 
 export default function AppShell({
   children,
@@ -18,7 +25,28 @@ export default function AppShell({
   sidebarExtra?: ReactNode;
 }) {
   const navigate = useNavigate();
-  const user = getUser();
+  const location = useLocation();
+  const [user, setCurrent] = useState(getUser);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // rights (admin / restricted) can change after sign-in: refresh them from the server
+  useEffect(() => {
+    const id = getUser()?._id;
+    if (!id) return;
+    axios
+      .get("/api/me", { params: { userId: id } })
+      .then((r) => {
+        const fresh = r.data.userInfo;
+        const old = getUser();
+        if (old && (old.role !== fresh.role || JSON.stringify(old.permissions || []) !== JSON.stringify(fresh.permissions || []))) {
+          setUser({ ...old, role: fresh.role, permissions: fresh.permissions });
+          setCurrent(getUser());
+        }
+      })
+      .catch(() => {});
+  }, []);
+  // close the small-screen menu after navigating
+  useEffect(() => setMenuOpen(false), [location.pathname]);
   const [theme, setTheme] = useState(() =>
     document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"
   );
@@ -40,6 +68,9 @@ export default function AppShell({
   return (
     <div>
       <header className="topbar">
+        <button className="btn btn-sm btn-ghost menu-toggle" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
+          ☰
+        </button>
         <Link
           to="/"
           className="brand"
@@ -87,9 +118,10 @@ export default function AppShell({
       </header>
 
       <div className="body-grid">
-        <aside className="sidebar">
+        {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
+        <aside className={`sidebar${menuOpen ? " open" : ""}`} aria-label="Main menu">
           <div className="nav-section">Workspace</div>
-          {NAV.map((n) => (
+          {[...NAV, ...(isAdmin(user) ? [{ to: "/taxonomy", label: "Document types", icon: "☰", end: false }, { to: "/migrations", label: "Migrations", icon: "⇪", end: false }] : [])].map((n) => (
             <NavLink
               key={n.to}
               to={n.to}

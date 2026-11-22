@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
@@ -7,18 +7,25 @@ import Chatbot from "../components/Chatbot";
 import ResultView from "../components/ResultView";
 import LoadingMessages from "../components/LoadingMessages";
 import { getUser } from "../auth";
+import { useUploads } from "../features/upload/useUploads";
+import UploadTray from "../features/upload/UploadTray";
+import { errorMessage } from "../features/upload/uploadApi";
+import DropZone, { BrowseButtons } from "../features/upload/DropZone";
+import { startBatchUpload } from "../features/batches/startBatchUpload";
+import DocumentStatus from "../features/intake/DocumentStatus";
 import {
   getFolder,
   deleteFolder,
   deleteTable,
-  uploadOne,
   FolderItem,
   FileItem,
   SavedTableItem,
 } from "../api";
 
 type Tab = "chat" | "tables" | "files";
-const MAX_MB = 4.5;
+
+// Processed documents can be opened and asked about, including ones awaiting review.
+const isUsable = (f: { status: string }) => f.status === "ready" || f.status === "needs_review";
 
 export default function FolderPage() {
   const { id } = useParams();
@@ -32,8 +39,7 @@ export default function FolderPage() {
   const [tab, setTab] = useState<Tab>("chat");
   const [modal, setModal] = useState<SavedTableItem | null>(null);
   const user = getUser()!;
-  const addRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState("");
+  const [lastBatch, setLastBatch] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -51,26 +57,19 @@ export default function FolderPage() {
     return () => clearInterval(t);
   }, [state, load]);
 
-  const onAddPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(e.target.files || []).filter((f) => {
-      if (f.size > MAX_MB * 1024 * 1024) {
-        message.error(`"${f.name}" is over ${MAX_MB} MB — skipped`);
-        return false;
-      }
-      return true;
-    });
-    e.target.value = "";
+  const uploads = useUploads(user._id, () => {
+    load();
+  });
+  // Dropped or picked files (already validated) are added to this set.
+  const addFiles = (picked: File[]) => {
     if (!picked.length || !id) return;
-    setUploading(`Uploading ${picked.length}…`);
-    try {
-      for (const f of picked) await uploadOne(f, user._id, id);
-      message.success("Added — parsing…");
-      load();
-    } catch {
-      message.error("Upload failed");
-    } finally {
-      setUploading("");
+    if (picked.length === 1) {
+      uploads.enqueue(picked, id);
+      return;
     }
+    startBatchUpload(uploads.enqueue, user._id, picked, { folderId: id })
+      .then((b) => b && setLastBatch(b._id))
+      .catch((err) => message.error(errorMessage(err, "Could not start the upload")));
   };
 
   if (loading || !state)
@@ -83,7 +82,7 @@ export default function FolderPage() {
     );
 
   const { folder, files, tables } = state;
-  const readyIds = files.filter((f) => f.status === "ready").map((f) => f._id);
+  const readyIds = files.filter((f) => isUsable(f)).map((f) => f._id);
   const processing = files.filter((f) => f.status === "processing").length;
 
   const removeTable = async (t: SavedTableItem) => {
@@ -107,6 +106,7 @@ export default function FolderPage() {
 
   return (
     <AppShell>
+      <DropZone onFiles={addFiles} defaultTarget={{ folderId: folder._id, label: `“${folder.name}”` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
         <button className="btn btn-sm" onClick={() => nav("/documents")}>
           ← Documents
@@ -115,10 +115,9 @@ export default function FolderPage() {
           📁 {folder.name}
         </h2>
         <span className="label">{files.length} files</span>
-        <input ref={addRef} type="file" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.docx,.txt,.md,.csv" onChange={onAddPicked} />
-        <button className="btn btn-sm btn-primary" style={{ marginLeft: "auto" }} onClick={() => addRef.current?.click()} disabled={!!uploading}>
-          {uploading || "＋ Add files"}
-        </button>
+        <span style={{ marginLeft: "auto" }}>
+          <BrowseButtons compact target={{ folderId: folder._id, label: folder.name }} />
+        </span>
         <button className="btn btn-sm btn-danger" onClick={removeFolder}>
           Delete set
         </button>
@@ -185,8 +184,8 @@ export default function FolderPage() {
           {files.map((f) => (
             <div
               key={f._id}
-              className={"row" + (f.status === "ready" ? " clickable" : "")}
-              onClick={() => f.status === "ready" && nav(`/files/${f._id}`)}
+              className={"row" + (isUsable(f) ? " clickable" : "")}
+              onClick={() => isUsable(f) && nav(`/files/${f._id}`)}
             >
               <span>📄</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -197,13 +196,26 @@ export default function FolderPage() {
                   {dayjs(f.createdAt).format("MMM D, YYYY")}
                 </div>
               </div>
-              <span className={"badge " + (f.status === "ready" ? "ready" : f.status === "failed" ? "failed" : "processing")}>
-                <span className="dot" /> {f.status}
-              </span>
+              <DocumentStatus doc={f} userId={user._id} onRetried={() => load()} />
             </div>
           ))}
         </div>
       )}
+
+      <UploadTray
+        items={uploads.items}
+        onCancel={uploads.cancel}
+        onRetry={uploads.retry}
+        onDismiss={uploads.dismiss}
+        onClear={uploads.clearFinished}
+        footer={
+          lastBatch && (
+            <a href={`/batches/${lastBatch}`} onClick={(e) => { e.preventDefault(); nav(`/batches/${lastBatch}`); }}>
+              View batch progress →
+            </a>
+          )
+        }
+      />
 
       {modal && (
         <div
@@ -230,6 +242,7 @@ export default function FolderPage() {
           </div>
         </div>
       )}
+      </DropZone>
     </AppShell>
   );
 }

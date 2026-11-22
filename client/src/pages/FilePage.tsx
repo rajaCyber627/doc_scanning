@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import dayjs from "dayjs";
 import AppShell from "../components/AppShell";
@@ -8,14 +8,22 @@ import ResultView from "../components/ResultView";
 import LoadingMessages from "../components/LoadingMessages";
 import PdfViewer from "../components/PdfViewer";
 import ImageViewer from "../components/ImageViewer";
+import RelatedDocuments from "../features/documents/RelatedDocuments";
+import OcrPanel from "../features/ocr/OcrPanel";
+import DuplicatePanel from "../features/duplicates/DuplicatePanel";
+import MetadataPanel from "../features/metadata/MetadataPanel";
+import ClassificationPanel from "../features/classification/ClassificationPanel";
+import PagesCard from "../features/splitting/PagesCard";
+import AttentionCard from "../features/review/AttentionCard";
+import { getUser } from "../auth";
 import {
   getFile,
   getFileText,
   deleteTable,
   deleteFile,
   updateFile,
-  FileItem,
   TableResultItem,
+  FileDetail,
 } from "../api";
 
 type Tab = "chat" | "tables" | "document";
@@ -23,13 +31,10 @@ type Tab = "chat" | "tables" | "document";
 export default function FilePage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [state, setState] = useState<{
-    file: FileItem;
-    viewUrl: string;
-    tables: TableResultItem[];
-  } | null>(null);
+  const user = getUser()!;
+  const [state, setState] = useState<FileDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("chat");
+  const [tab, setTab] = useState<Tab>("document"); // open on the document itself
   const [modal, setModal] = useState<TableResultItem | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -52,9 +57,13 @@ export default function FilePage() {
   const file0 = state?.file;
   const isPdf =
     !!file0 && ((file0.mimeType || "").includes("pdf") || file0.fileName.toLowerCase().endsWith(".pdf"));
+  // Images the browser can show (TIFF can't be shown by most browsers → PDF view).
+  // HEIC/GIF/BMP are shown via their converted JPEG (viewUrl), which OCR also read.
   const isImage =
-    !!file0 &&
-    ((file0.mimeType || "").startsWith("image/") || /\.(png|jpe?g|tiff?)$/i.test(file0.fileName));
+    !!file0 && (/\.(png|jpe?g)$/i.test(file0.fileName) || (!!file0.ocrSourceS3Key && !/\.tiff?$/i.test(file0.fileName)));
+  const hasRendition = !!file0?.renditionS3Key && !isPdf && !isImage;
+  // Ready, but its PDF view is still being made (or failed) → poll briefly.
+  const awaitingView = !!file0 && file0.status === "ready" && !isPdf && !isImage && !hasRendition && !/\.zip$/i.test(file0.fileName);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -66,6 +75,15 @@ export default function FilePage() {
     setLoading(true);
     Promise.resolve(load()).finally(() => setLoading(false));
   }, [load]);
+  const viewPolls = useRef(0);
+  useEffect(() => {
+    if (!awaitingView || viewPolls.current >= 20) return;
+    const t = setTimeout(() => {
+      viewPolls.current++;
+      load();
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [awaitingView, load, state]);
 
   const ensureText = useCallback(() => {
     if (docText !== null || textLoading || !id) return;
@@ -77,14 +95,14 @@ export default function FilePage() {
   }, [docText, textLoading, id]);
 
   const openFind = useCallback(() => {
-    if (isPdf || isImage) setDocView("original");
+    if (isPdf || isImage || hasRendition) setDocView("original");
     else {
       setDocView("text");
       ensureText();
     }
     setFindOpen(true);
     setTimeout(() => findRef.current?.focus(), 60);
-  }, [ensureText, isPdf, isImage]);
+  }, [ensureText, isPdf, isImage, hasRendition]);
   const closeFind = () => {
     setFindOpen(false);
     setFindQ("");
@@ -156,7 +174,7 @@ export default function FilePage() {
   }, [docText, committed, cur]);
 
   const count =
-    docView === "text" ? matchCount : isPdf ? pdfCount : isImage ? imageCount : matchCount;
+    docView === "text" ? matchCount : isPdf || hasRendition ? pdfCount : isImage ? imageCount : matchCount;
 
   // reset to the first match when a new search is committed or the view changes
   useEffect(() => {
@@ -193,6 +211,7 @@ export default function FilePage() {
     );
 
   const { file, viewUrl, tables } = state;
+  const downloadUrl = state.downloadUrl || viewUrl;
   const tags = file.tags || [];
 
   const patch = async (p: { fileName?: string; tags?: string[] }) => {
@@ -238,8 +257,19 @@ export default function FilePage() {
     const v = findQ.trim();
     setCommitted(v);
     setCur(0);
-    setSearching(!!v && (isPdf || isImage));
+    setSearching(!!v && (isPdf || isImage || hasRendition));
   };
+
+  // Show an AI evidence quote on the page (uses the normal find-in-document).
+  const showQuote = (q: string) => {
+    setTab("document");
+    openFind();
+    setFindQ(q);
+    setCommitted(q);
+    setCur(0);
+    setSearching(isPdf || isImage || hasRendition);
+  };
+  const canSeeRestricted = user.role === "admin" || (user.permissions || []).some((x) => x === "restricted" || x === "admin");
 
   const segStyle = (on: boolean): React.CSSProperties => ({
     border: "none",
@@ -291,9 +321,21 @@ export default function FilePage() {
         >
           <span className="dot" /> {file.status}
         </span>
-        <button className="btn btn-sm btn-danger" style={{ marginLeft: "auto" }} onClick={removeDoc}>
-          Delete
-        </button>
+        <span style={{ marginLeft: "auto", display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+          {["ready", "needs_review"].includes(file.status) && (/pdf/i.test(file.mimeType || "") || !!file.renditionS3Key) && (
+            <Link className="btn btn-sm" to={`/files/${file._id}/pages`} title="See every page; split into documents, rotate or remove pages, print separator sheets">
+              📑 Pages &amp; split
+            </Link>
+          )}
+          {downloadUrl && (
+            <a className="btn btn-sm" href={downloadUrl} target="_blank" rel="noreferrer">
+              ⬇ Download
+            </a>
+          )}
+          <button className="btn btn-sm btn-danger" onClick={removeDoc}>
+            Delete
+          </button>
+        </span>
       </div>
       <div className="faint" style={{ fontSize: 12, marginBottom: 18 }}>
         Uploaded {dayjs(file.createdAt).format("MMM D, YYYY · h:mm A")}
@@ -302,6 +344,7 @@ export default function FilePage() {
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 22 }} className="fp-grid">
         {/* main */}
         <div style={{ minWidth: 0 }}>
+          <AttentionCard file={file} userId={user._id} onChanged={load} />
           <div className="tabs">
             <button className={"tab" + (tab === "chat" ? " active" : "")} onClick={() => setTab("chat")}>
               💬 Chat
@@ -443,7 +486,8 @@ export default function FilePage() {
                   )
                 ) : isPdf ? (
                   <PdfViewer
-                    url={`/api/files/${file._id}/raw`}
+                    // scanned PDFs: the searchable version (same pages + OCR text layer)
+                    url={file.renditionS3Key ? `/api/files/${file._id}/rendition` : `/api/files/${file._id}/raw`}
                     fileId={file._id}
                     query={committed}
                     activeIndex={cur}
@@ -458,14 +502,24 @@ export default function FilePage() {
                     activeIndex={cur}
                     onCount={onImageCount}
                   />
+                ) : hasRendition ? (
+                  <PdfViewer
+                    url={`/api/files/${file._id}/rendition`}
+                    fileId={file._id}
+                    query={committed}
+                    activeIndex={cur}
+                    onCount={onPdfCount}
+                  />
                 ) : (
                   <div style={{ height: "100%", display: "grid", placeItems: "center", textAlign: "center", padding: 24 }}>
                     <div>
                       <div style={{ fontSize: 32, marginBottom: 10 }}>📄</div>
                       <div className="muted" style={{ marginBottom: 12 }}>
-                        Inline preview isn't available for this file type.
+                        {awaitingView && viewPolls.current < 20
+                          ? "Preparing a preview of this document…"
+                          : "Inline preview isn't available for this file type."}
                       </div>
-                      <a className="btn" href={viewUrl} target="_blank" rel="noreferrer">
+                      <a className="btn" href={downloadUrl} target="_blank" rel="noreferrer">
                         ⬇ Download original
                       </a>
                     </div>
@@ -478,6 +532,16 @@ export default function FilePage() {
 
         {/* about sidebar */}
         <aside style={{ minWidth: 0 }}>
+          <ClassificationPanel file={file} userId={user._id} canSeeRestricted={canSeeRestricted} onChanged={load} onShowQuote={showQuote} />
+          {/* while an AI suggestion waits, the suggestion panel above is where details are confirmed
+              (one form at a time); the full form appears once it is accepted, or if the AI could not help */}
+          {(file.status === "ready" || file.status === "needs_review") && !(file.status === "needs_review" && (file.classification as any)?.status === "suggested") && (
+            <MetadataPanel fileId={file._id} userId={user._id} initial={file.metadata || {}} status={file.metadataStatus} serverErrors={file.metadataErrors} onSaved={load} />
+          )}
+          {(file.duplicateOf?.length ?? 0) > 0 && <DuplicatePanel fileId={file._id} userId={user._id} onChanged={load} />}
+          <PagesCard file={file} userId={user._id} />
+          <OcrPanel file={file} userId={user._id} onChanged={load} />
+          <RelatedDocuments detail={state} />
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-header">About</div>
             <div style={{ padding: 14 }}>

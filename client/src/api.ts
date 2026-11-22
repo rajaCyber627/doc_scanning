@@ -13,6 +13,8 @@ export interface UserInfo {
   email: string;
   twoFactorEnabled?: boolean;
   customInstructions?: string;
+  role?: string;
+  permissions?: string[];
 }
 
 export interface SavedPromptItem {
@@ -30,7 +32,7 @@ export interface LoginResult {
   nudge2fa?: boolean;
 }
 
-export type FileStatus = "processing" | "ready" | "failed";
+export type FileStatus = "processing" | "ready" | "needs_review" | "failed";
 
 export interface FileItem {
   _id: string;
@@ -38,6 +40,33 @@ export interface FileItem {
   status: FileStatus;
   mimeType?: string;
   error?: string;
+  errorCode?: string;
+  stage?: string | null; // current pipeline stage while processing
+  sizeBytes?: number | null;
+  renditionS3Key?: string | null; // a PDF view exists (P05)
+  ocrSourceS3Key?: string | null; // converted JPEG for HEIC/GIF/BMP
+  parentDocumentId?: string | null;
+  childSummary?: { created: number; skipped: { name: string; reason: string }[] };
+  reviewReasons?: { code: string; message: string; stage?: string; page?: number }[];
+  notes?: { code: string; message: string; stage?: string; page?: number }[]; // non-blocking page notes
+  duplicateOf?: { kind: string; where: string }[];
+  metadata?: Record<string, any>;
+  classification?: Record<string, any> | null;
+  metadataStatus?: "missing" | "incomplete" | "complete";
+  metadataErrors?: { field: string; message: string }[];
+  supersedes?: string | null;
+  supersededBy?: string | null;
+  pageCount?: number | null;
+  splitInto?: string[];
+  splitAt?: string | null;
+  splitFrom?: { fileId: string; part: number; pages: number[]; via: string } | null;
+  ocr?: {
+    provider: string;
+    pages: number;
+    avgConfidence: number | null;
+    corrected?: boolean;
+    keyValues?: { key: string; value: string; page?: number; confidence?: number }[];
+  } | null;
   createdAt: string;
   summary?: string;
   keyFacts?: { label: string; value: any }[];
@@ -155,11 +184,25 @@ export const getFolder = (id: string) =>
     (r) => r.data as { folder: FolderItem; files: FileItem[]; tables: SavedTableItem[] }
   );
 
+export interface RelatedDoc {
+  _id: string;
+  fileName: string;
+  status: FileStatus;
+  stage?: string | null;
+  error?: string;
+}
+
+export interface FileDetail {
+  file: FileItem;
+  viewUrl: string; // what to display (converted image for HEIC/GIF/BMP)
+  downloadUrl?: string; // always the untouched original
+  tables: TableResultItem[];
+  children: RelatedDoc[]; // attachments / archive contents
+  parent: RelatedDoc | null; // the email or archive this came from
+}
+
 export const getFile = (id: string) =>
-  api.get(`/api/files/${id}`).then(
-    (r) =>
-      r.data as { file: FileItem; viewUrl: string; tables: TableResultItem[] }
-  );
+  api.get(`/api/files/${id}`).then((r) => ({ children: [], parent: null, ...r.data }) as FileDetail);
 
 export interface Validation {
   status: "verified" | "partial" | "unsupported";
@@ -210,6 +253,9 @@ export interface ContentHit {
   count: number;
   snippet: string;
   inName: boolean;
+  highlights?: [number, number][]; // ranges in snippet to mark
+  page?: number | null; // page of the first match
+  status?: FileStatus;
 }
 
 export const searchContent = (userId: string, q: string) =>
