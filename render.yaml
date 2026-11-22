@@ -1,4 +1,5 @@
-# Render Blueprint — one Web Service runs the API and serves the built React app.
+# Render Blueprint — one Web Service runs the API and serves the built React app
+# (pre-built into backend/public; rebuild with `cd client && npm run build` before pushing UI changes).
 # Render → New → Blueprint → pick this repo. Secret values are entered in the Render
 # dashboard (sync: false), never committed.
 services:
@@ -9,7 +10,9 @@ services:
     region: virginia # same area as the S3 bucket / Textract (us-east-1)
     branch: feature/capture-hub
     rootDir: .
-    buildCommand: cd client && npm ci && CI=false npm run build && cd ../backend && npm ci --omit=dev
+    # The React app is built on a developer machine (it needs ~1.7 GB of memory, more than the
+    # Starter plan has) and shipped in backend/public:  cd client && npm run build
+    buildCommand: cd backend && npm ci --omit=dev
     startCommand: cd backend && node app.js
     healthCheckPath: /api/uploads/config
     autoDeploy: true

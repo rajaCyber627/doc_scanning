@@ -17,6 +17,7 @@ import PagesCard from "../features/splitting/PagesCard";
 import AttentionCard from "../features/review/AttentionCard";
 import { getUser } from "../auth";
 import {
+  API_BASE_URL,
   getFile,
   getFileText,
   deleteTable,
@@ -487,7 +488,7 @@ export default function FilePage() {
                 ) : isPdf ? (
                   <PdfViewer
                     // scanned PDFs: the searchable version (same pages + OCR text layer)
-                    url={file.renditionS3Key ? `/api/files/${file._id}/rendition` : `/api/files/${file._id}/raw`}
+                    url={`${API_BASE_URL}/api/files/${file._id}/${file.renditionS3Key ? "rendition" : "raw"}`}
                     fileId={file._id}
                     query={committed}
                     activeIndex={cur}
@@ -504,7 +505,7 @@ export default function FilePage() {
                   />
                 ) : hasRendition ? (
                   <PdfViewer
-                    url={`/api/files/${file._id}/rendition`}
+                    url={`${API_BASE_URL}/api/files/${file._id}/rendition`}
                     fileId={file._id}
                     query={committed}
                     activeIndex={cur}
