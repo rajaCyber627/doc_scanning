@@ -1,9 +1,14 @@
 import axios from "axios";
 
-// Same-origin requests. On Vercel these /api calls are proxied to the EC2
-// backend (see client/vercel.json); when the backend serves the built UI
-// directly, they hit it on the same origin.
-const api = axios.create({ baseURL: "" });
+// Backend origin from REACT_APP_API_BASE_URL (client/.env). Blank = same-origin:
+// on Vercel these /api calls are proxied to the backend (see client/vercel.json);
+// when the backend serves the built UI directly, they hit it on the same origin.
+export const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+
+// Components that call axios directly (relative /api paths) use the same base.
+axios.defaults.baseURL = API_BASE_URL;
+
+const api = axios.create({ baseURL: API_BASE_URL });
 
 export interface UserInfo {
   _id: string;

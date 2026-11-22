@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "./api"; // sets axios.defaults.baseURL from REACT_APP_API_BASE_URL before any request
 import App from "./App";
 import "./index.css";
 

@@ -12,7 +12,9 @@ const FEATURES = ['auth', 'prompts', 'upload', 'batches', 'duplicates', 'metadat
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use(cors());
+  // CORS_ORIGIN: comma-separated allowed origins (e.g. the CRA dev server). Unset = any origin.
+  const corsOrigins = (process.env.CORS_ORIGIN || '').split(',').map((o) => o.trim()).filter(Boolean);
+  app.use(cors(corsOrigins.length ? { origin: corsOrigins } : undefined));
   app.use(express.static(PUBLIC_DIR));
 
   for (const name of FEATURES) app.use(require(`./features/${name}/routes`));
