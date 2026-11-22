@@ -1,6 +1,7 @@
 // Sends one file: ask the server for an upload target, send the bytes (direct to S3,
 // in parallel parts for large files, or through the server), then ask the server to
 // verify and create the document.
+import { API_BASE_URL } from "../../api";
 import {
   abortUpload,
   completeUpload,
@@ -117,7 +118,8 @@ async function sendBytes(file: File, t: UploadTarget, opts: UploadOptions, proxy
   const report = (loaded: number) => opts.onProgress?.(Math.min(1, loaded / file.size));
 
   if (t.transport === "proxy") {
-    await put(`${t.proxyUrl}${proxyQuery}`, file, { "Content-Type": "application/octet-stream" }, report, opts.signal);
+    // proxyUrl is a relative /api path; raw XHR ignores axios baseURL, so prefix it here.
+    await put(`${API_BASE_URL}${t.proxyUrl}${proxyQuery}`, file, { "Content-Type": "application/octet-stream" }, report, opts.signal);
     return undefined;
   }
   if (t.url) {
