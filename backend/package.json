@@ -58,5 +58,8 @@
       "<rootDir>/tests/**/*.test.js"
     ],
     "testTimeout": 60000
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

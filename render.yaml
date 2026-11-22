@@ -1,0 +1,49 @@
+# Render Blueprint — one Web Service runs the API and serves the built React app.
+# Render → New → Blueprint → pick this repo. Secret values are entered in the Render
+# dashboard (sync: false), never committed.
+services:
+  - type: web
+    name: docp
+    runtime: node
+    plan: starter # always on: the processing queue, scanner folders and email intake run in this process
+    region: virginia # same area as the S3 bucket / Textract (us-east-1)
+    branch: feature/capture-hub
+    rootDir: .
+    buildCommand: cd client && npm ci && CI=false npm run build && cd ../backend && npm ci --omit=dev
+    startCommand: cd backend && node app.js
+    healthCheckPath: /api/uploads/config
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # --- database (MongoDB Atlas) ---
+      - key: MONGO_URI
+        sync: false
+      # --- AI ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+      # --- AWS: S3 storage + Textract OCR ---
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_BUCKET_NAME
+        sync: false
+      - key: AWS_ACCESS_KEY
+        sync: false
+      - key: AWS_ACCESS_SECRETKEY
+        sync: false
+      - key: TEXTRACT_REGION
+        value: us-east-1
+      - key: TEXTRACT_ACCESS_KEY
+        sync: false
+      - key: TEXTRACT_SECRET_ACCESS_KEY
+        sync: false
+      # --- email (sign-up codes, notifications) ---
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      # --- optional capture sources (see docs/capture/*.md) ---
+      # EMAIL_INTAKE_SOURCE=graph + GRAPH_TENANT_ID / GRAPH_CLIENT_ID / GRAPH_CLIENT_SECRET / GRAPH_MAILBOX
+      # Scanner folders on Render: use S3-prefix folders (no network share is mounted on Render)
